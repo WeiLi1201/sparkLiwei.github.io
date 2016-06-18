@@ -4,6 +4,15 @@
   
     
     <entry>
+      <title></title>
+      <url>http://spark8.tech/2016/06/18/Linux%E2%80%94%E2%80%94%E4%B8%89%E7%A7%8D%E7%BD%91%E7%BB%9C%E8%BF%9E%E6%8E%A5%E6%96%B9%E5%BC%8F/</url>
+      <content type="html"><![CDATA[<h1 id="Linux三种网络连接方式"><a href="#Linux三种网络连接方式" class="headerlink" title="Linux三种网络连接方式"></a>Linux三种网络连接方式</h1><h2 id="一、NAT"><a href="#一、NAT" class="headerlink" title="一、NAT"></a>一、NAT</h2><p><img src="images/NAT.png" alt="NAT1" title="NAT连接"></p>
+<h2 id="二、bridge"><a href="#二、bridge" class="headerlink" title="二、bridge"></a>二、bridge</h2><p><img src="images/bridge.png" alt=""></p>
+<h2 id="三、host-only"><a href="#三、host-only" class="headerlink" title="三、host-only"></a>三、host-only</h2><p><img src="images/host-only.png" alt="host-only1" title="host-only"></p>
+]]></content>
+    </entry>
+    
+    <entry>
       <title><![CDATA[hello]]></title>
       <url>http://spark8.tech/2016/06/18/hello-1/</url>
       <content type="html"><![CDATA[<a id="more"></a>
