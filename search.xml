@@ -4,51 +4,90 @@
   
     
     <entry>
-      <title></title>
-      <url>http://spark8.tech/2016/06/18/Linux%E2%80%94%E2%80%94%E4%B8%89%E7%A7%8D%E7%BD%91%E7%BB%9C%E8%BF%9E%E6%8E%A5%E6%96%B9%E5%BC%8F/</url>
-      <content type="html"><![CDATA[<h1 id="Linux三种网络连接方式"><a href="#Linux三种网络连接方式" class="headerlink" title="Linux三种网络连接方式"></a>Linux三种网络连接方式</h1><h2 id="一、NAT"><a href="#一、NAT" class="headerlink" title="一、NAT"></a>一、NAT</h2><p><img src="images/NAT.png" alt="NAT1" title="NAT连接"></p>
-<h2 id="二、bridge"><a href="#二、bridge" class="headerlink" title="二、bridge"></a>二、bridge</h2><p><img src="images/bridge.png" alt=""></p>
-<h2 id="三、host-only"><a href="#三、host-only" class="headerlink" title="三、host-only"></a>三、host-only</h2><p><img src="images/host-only.png" alt="host-only1" title="host-only"></p>
-]]></content>
-    </entry>
-    
-    <entry>
-      <title><![CDATA[hello]]></title>
-      <url>http://spark8.tech/2016/06/18/hello-1/</url>
+      <title><![CDATA[Linux——网络连接三种方式]]></title>
+      <url>http://spark8.tech/2016/05/16/Linux%E2%80%94%E4%B8%89%E7%A7%8D%E7%BD%91%E7%BB%9C%E8%BF%9E%E6%8E%A5%E6%96%B9%E5%BC%8F/</url>
       <content type="html"><![CDATA[<a id="more"></a>
-<p>#<img src="/images/image.jpg" alt=""></p>
+<h2 id="一、NAT"><a href="#一、NAT" class="headerlink" title="一、NAT"></a>一、NAT</h2><p><img src="/images/NAT.png" alt="NAT示意图" title="NAT连接"></p>
+<h2 id="二、bridge"><a href="#二、bridge" class="headerlink" title="二、bridge"></a>二、bridge</h2><p><img src="/images/bridge.png" alt="bridge示意图"></p>
+<h2 id="三、host-only"><a href="#三、host-only" class="headerlink" title="三、host-only"></a>三、host-only</h2><p><img src="/images/host-only.png" alt="host-only示意图" title="host-only"></p>
 ]]></content>
     </entry>
     
     <entry>
-      <title><![CDATA[hello]]></title>
-      <url>http://spark8.tech/2016/06/18/hello/</url>
+      <title><![CDATA[Shell编程——自动化软件部署脚本]]></title>
+      <url>http://spark8.tech/2016/05/15/Shell%E7%BC%96%E7%A8%8B%E2%80%94%E2%80%94%E8%87%AA%E5%8A%A8%E5%8C%96%E8%BD%AF%E4%BB%B6%E9%83%A8%E7%BD%B2%E8%84%9A%E6%9C%AC/</url>
       <content type="html"><![CDATA[<a id="more"></a>
-]]></content>
-    </entry>
-    
-    <entry>
-      <title></title>
-      <url>http://spark8.tech/2016/06/13/index/</url>
-      <content type="html"><![CDATA[<h1 id="Linux三种网络连接方式"><a href="#Linux三种网络连接方式" class="headerlink" title="Linux三种网络连接方式"></a>Linux三种网络连接方式</h1><h2 id="一、NAT"><a href="#一、NAT" class="headerlink" title="一、NAT"></a>一、NAT</h2><p><img src="NAT.png" alt=""></p>
-<h2 id="二、bridge"><a href="#二、bridge" class="headerlink" title="二、bridge"></a>二、bridge</h2><p><img src="bridge.png" alt=""></p>
-<h2 id="三、host-only"><a href="#三、host-only" class="headerlink" title="三、host-only"></a>三、host-only</h2><p><img src="host-only.png" alt=""></p>
-]]></content>
-    </entry>
-    
-    <entry>
-      <title><![CDATA[Hello World]]></title>
-      <url>http://spark8.tech/2016/06/08/hello-world/</url>
-      <content type="html"><![CDATA[<p>Welcome to <a href="https://hexo.io/" target="_blank" rel="external">Hexo</a>! This is your very first post. Check <a href="https://hexo.io/docs/" target="_blank" rel="external">documentation</a> for more info. If you get any problems when using Hexo, you can find the answer in <a href="https://hexo.io/docs/troubleshooting.html" target="_blank" rel="external">troubleshooting</a> or you can ask me on <a href="https://github.com/hexojs/hexo/issues" target="_blank" rel="external">GitHub</a>.</p>
-<h2 id="Quick-Start"><a href="#Quick-Start" class="headerlink" title="Quick Start"></a>Quick Start</h2><h3 id="Create-a-new-post"><a href="#Create-a-new-post" class="headerlink" title="Create a new post"></a>Create a new post</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ hexo new <span class="string">"My New Post"</span></span><br></pre></td></tr></table></figure>
-<p>More info: <a href="https://hexo.io/docs/writing.html" target="_blank" rel="external">Writing</a></p>
-<h3 id="Run-server"><a href="#Run-server" class="headerlink" title="Run server"></a>Run server</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ hexo server</span><br></pre></td></tr></table></figure>
-<p>More info: <a href="https://hexo.io/docs/server.html" target="_blank" rel="external">Server</a></p>
-<h3 id="Generate-static-files"><a href="#Generate-static-files" class="headerlink" title="Generate static files"></a>Generate static files</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ hexo generate</span><br></pre></td></tr></table></figure>
-<p>More info: <a href="https://hexo.io/docs/generating.html" target="_blank" rel="external">Generating</a></p>
-<h3 id="Deploy-to-remote-sites"><a href="#Deploy-to-remote-sites" class="headerlink" title="Deploy to remote sites"></a>Deploy to remote sites</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ hexo deploy</span><br></pre></td></tr></table></figure>
-<p>More info: <a href="https://hexo.io/docs/deployment.html" target="_blank" rel="external">Deployment</a></p>
-]]></content>
+<h2 id="需求描述"><a href="#需求描述" class="headerlink" title="需求描述"></a>需求描述</h2><p>开发一个脚本，实现对局域网中的N台节点批量自动下载、安装jdk</p>
+<h2 id="思路"><a href="#思路" class="headerlink" title="思路"></a>思路</h2><p>编写一个启动脚本，发送一个软件安装脚本到每一台机器<br>然后启动每台机器上的软件安装脚本来执行软件下载和安装<br><img src="/images/自动化软件部署脚本思路图.png" alt="自动化软件部署脚本思路图" title="自动化软件部署脚本思路图"></p>
+<h2 id="关键点"><a href="#关键点" class="headerlink" title="关键点"></a>关键点</h2><p>难点：使用scp命令远程拷贝文件时，会有人机交互的过程，如何让脚本完成人机交互?<br>解决：expect<br>用法示例：先观察  ssh localhost 的过程，再看expect的功能</p>
+<pre><code>#!/bin/bash/expect
+   # exp_test.sh
+   set timeout -1;
+   spawn ssh localhost;
+   expect {
+       &quot;(yes/no)&quot; {send &quot;yes\r&quot;;exp_continue;}
+       &quot;password:&quot; {send &quot;hadoop\r&quot;;exp_continue;}
+       eof        {exit 0;}
+   }
+</code></pre><h2 id="准备环境"><a href="#准备环境" class="headerlink" title="准备环境"></a>准备环境</h2><p>选择一台服务器（比如CentOS）作为软件源服务器</p>
+<ol>
+<li>安装httpd</li>
+<li>制作局域网yum源</li>
+<li>编写repo配置</li>
+<li>分发repo配置到局域网</li>
+<li>准备一个jdk安装包放在内网web服务器上</li>
+</ol>
+<h2 id="脚本开发"><a href="#脚本开发" class="headerlink" title="脚本开发"></a>脚本开发</h2><ol>
+<li><p>启动脚本boot.sh</p>
+<pre><code>#!/bin/bash  
+SERVERS=&quot;mini3&quot; 
+PASSWORD=hadoop 
+BASE_SERVER=192.168.59.101 
+auto_ssh_copy_id() { 
+    expect -c &quot;set timeout -1;
+    spawn ssh-copy-id $1;
+    expect {
+        *(yes/no)* {send -- yes\r;exp_continue;}
+        *assword:* {send -- $2\r;exp_continue;}
+        eof{exit 0;}
+    }&quot;;
+}
+ssh_copy_id_to_all() {
+    for SERVER in $SERVERS
+        do
+        auto_ssh_copy_id $SERVER $PASSWORD
+        done
+    }
+ssh_copy_id_to_all 
+</code></pre></li>
+<li><p>执行脚本install.sh</p>
+<pre><code>#!/bin/bash
+BASE_SERVER=192.168.59.101
+
+yum install -y wget
+
+wget $BASE_SERVER/soft/jdk-7u67-linux-x64.gz
+
+tar -zxvf jdk-7u67-linux-x64.gz -C /usr/local
+
+cat &gt;&gt; /etc/profile &lt;&lt; EOF
+export JAVA_HOME=/usr/local/jdk1.7.0_67
+export PATH=\$PATH:\$JAVA_HOME/bin
+EOF
+</code></pre><p> source /etc/profile</p>
+</li>
+<li><p>执行脚本</p>
+</li>
+</ol>
+<p>只要在baseServer即mini上启动boot.sh即可</p>
+<h2 id="通用问题"><a href="#通用问题" class="headerlink" title="通用问题"></a>通用问题</h2><p>Q1.目标机器名需要写死在脚本中<br>Tips：可以将所有需要安装软件的机器名写在一个文件：比如slaves中让脚本自动读取slaves文件中的机器名来批量安装</p>
+<pre><code>cat slaves | while read host
+do
+echo $host
+expect -c &quot;set timeout -f
+spawn ssh-copy-id $host&quot;
+done
+</code></pre>]]></content>
     </entry>
     
   
