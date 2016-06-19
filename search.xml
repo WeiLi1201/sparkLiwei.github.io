@@ -5,7 +5,7 @@
     
     <entry>
       <title><![CDATA[Linux——网络连接三种方式]]></title>
-      <url>http://spark8.tech/2016/05/16/Linux%E2%80%94%E4%B8%89%E7%A7%8D%E7%BD%91%E7%BB%9C%E8%BF%9E%E6%8E%A5%E6%96%B9%E5%BC%8F/</url>
+      <url>http://spark8.tech/2016/05/16/Linux1/</url>
       <content type="html"><![CDATA[<a id="more"></a>
 <h2 id="一、NAT"><a href="#一、NAT" class="headerlink" title="一、NAT"></a>一、NAT</h2><p><img src="/images/NAT.png" alt="NAT示意图" title="NAT连接"></p>
 <h2 id="二、bridge"><a href="#二、bridge" class="headerlink" title="二、bridge"></a>二、bridge</h2><p><img src="/images/bridge.png" alt="bridge示意图"></p>
@@ -15,7 +15,7 @@
     
     <entry>
       <title><![CDATA[Shell编程——自动化软件部署脚本]]></title>
-      <url>http://spark8.tech/2016/05/15/Shell%E7%BC%96%E7%A8%8B%E2%80%94%E2%80%94%E8%87%AA%E5%8A%A8%E5%8C%96%E8%BD%AF%E4%BB%B6%E9%83%A8%E7%BD%B2%E8%84%9A%E6%9C%AC/</url>
+      <url>http://spark8.tech/2016/05/15/Shell1/</url>
       <content type="html"><![CDATA[<a id="more"></a>
 <h2 id="需求描述"><a href="#需求描述" class="headerlink" title="需求描述"></a>需求描述</h2><p>开发一个脚本，实现对局域网中的N台节点批量自动下载、安装jdk</p>
 <h2 id="思路"><a href="#思路" class="headerlink" title="思路"></a>思路</h2><p>编写一个启动脚本，发送一个软件安装脚本到每一台机器<br>然后启动每台机器上的软件安装脚本来执行软件下载和安装<br><img src="/images/自动化软件部署脚本思路图.png" alt="自动化软件部署脚本思路图" title="自动化软件部署脚本思路图"></p>
