@@ -4,8 +4,145 @@
   
     
     <entry>
+      <title><![CDATA[Shell编程——使用HDFS Shell上传文件]]></title>
+      <url>http://spark8.tech/2016/05/17/Shell%E7%BC%96%E7%A8%8B%E2%80%94%E2%80%94%E4%BD%BF%E7%94%A8Shell%E4%B8%8A%E4%BC%A0%E6%95%B0%E6%8D%AE%E5%88%B0HDFS/</url>
+      <content type="html"><![CDATA[<a id="more"></a>
+<h2 id="需求描述"><a href="#需求描述" class="headerlink" title="需求描述"></a>需求描述</h2><p>点击流日志每天都10G，需要上传数据仓库（Hadoop HDFS）上</p>
+<h2 id="需求分析"><a href="#需求分析" class="headerlink" title="需求分析"></a>需求分析</h2><p>一般上传文件都是在凌晨24点操作，由于很多种类的业务数据都要在晚上进行传输，为了减轻服务器的压力，避开高峰期。需要伪实时的上传，即当文件有10G的时候，就上传一个。<br>一、    正常上传到hdfs的需求</p>
+<ol>
+<li>上传到hdfs的文件需要校验完整性。MD5</li>
+<li>一个文件在上传过程中另一个进程不能再次上传该文件  <em>COPY</em></li>
+<li>上传到hdfs的文件名不能相同   时间戳</li>
+<li>定时上传文件到hdfs  PUT<br>二、    异常上传的需求</li>
+<li><p>文件上传到hdfs过程中失败，需要有重试机制，<br> 若能再次连上需要保证数据能再次上传且数据不重复，也不丢失，<br> HDFS文件列表和本地待上传的文件列表进行比对<br> grep -diff<br> 若超过重试限制后需要发短信通知<br> java -jar </p>
+</li>
+<li><p>ftp服务连不上，需要有重试机制，超过重试限制需要发短信通知</p>
+</li>
+<li>运行脚本的服务器挂了，需要有备份服务器启动，并发短信通知<h2 id="实现流程"><a href="#实现流程" class="headerlink" title="实现流程"></a>实现流程</h2><h3 id="关键点"><a href="#关键点" class="headerlink" title="关键点"></a>关键点</h3></li>
+<li>HDFS SHELL:  hadoop fs  –put   xxxx.tar  /data    还可以使用 Java Api<br>  满足上传一个文件，不能满足定时、周期性传入。</li>
+<li><p>Linux crontab<br>“crontab -e <em>/5 </em> <em> </em> * $home/bin/command.sh ” //五分钟执行一次<br>系统会自动执行脚本，每五分钟一次，执行时判断文件是否等于10G，如果等于10G就可以上传。</p>
+<h3 id="代码实现"><a href="#代码实现" class="headerlink" title="代码实现"></a>代码实现</h3><p>以下为正常上传部分代码，异常上传部分未实现，只提供如上思路</p>
+<pre><code>!/bin/bash
+set java env
+export JAVA_HOME=/export/servers/jdk
+export JRE_HOME=${JAVA_HOME}/jre
+export CLASSPATH=.:${JAVA_HOME}/lib:${JRE_HOME}/lib
+export PATH=${JAVA_HOME}/bin:$PATH
+
+set hadoop env
+export HADOOP_HOME=/export/servers/hadoop
+export PATH=${HADOOP_HOME}/bin:${HADOOP_HOME}/sbin:$PATH
+</code></pre><p>日志文件存放的目录</p>
+<pre><code>log_src_dir=/export/software/
+
+s=du -k $log_src_dir |awk &apos;{print $1}&apos;
+if [ $s -lt 1024000000 ]
+then
+exit 1
+else
+continue
+fi
+</code></pre><p>待上传文件存放的目录</p>
+<pre><code>log_appending_dir=/export/data/click_log/
+</code></pre><p>日志文件上传到hdfs的根路径</p>
+<pre><code>hdfs_root_dir=/data/clickLog/20151226/
+</code></pre><p>读取日志文件的目录，判断是否有需要上传的文件</p>
+<pre><code>ls $log_src_dir | while read fileName
+do
+if [ &quot;hadoop.log1&quot; = &quot;$fileName&quot; ];then
+date=date +%Y_%m_%d_%H_%M_%S
+mv $log_src_dir$fileName $log_appending_dir&quot;xxxxx_click_log_&quot;$date
+echo $log_appending_dir&quot;xxxxx_click_log_&quot;$date &gt;&gt; /export/data/click_log/willDoing.$date
+fi
+
+done
+</code></pre><p>过滤掉正在copy和已经copy的文件</p>
+<pre><code>ls $log_appending_dir | grep will |grep -v &quot;_COPY_&quot; | grep -v &quot;_DONE_&quot; | while read line
+do
+</code></pre><p>对拿到的文件重命名</p>
+<pre><code>mv $log_appending_dir$line $log_appending_dir$line&quot;_COPY_&quot;
+cat $log_appending_dir$line&quot;_COPY_&quot; |while read line
+do
+hadoop fs -put $line $hdfs_root_dir
+done    
+mv $log_appending_dir$line&quot;_COPY_&quot;  $log_appending_dir$line&quot;_DONE_&quot;
+done
+</code></pre><p>重试核心代码</p>
+<pre><code>function failOver(){
+    echo &quot;重试机制启动....&quot;
+    #转钟逻辑处理
+    if [ &quot;00:00&quot; = $tag ] || [ &quot;00:01&quot; = $tag ]
+    then
+    yesterday_dt=date --date=&apos;yesterday&apos; +%Y-%m-%d
+    yesterday_ftp_date=date --date=&apos;yesterday&apos; +%Y%m%d
+    put_local_file_to_hdfs $yesterday_dt $yesterday_ftp_date
+    fi
+    #半小时逻辑处理
+    if [ &quot;40&quot; = $tagM ] || [ &quot;41&quot; = $tagM ]
+    then
+            today_dt=date +%Y-%m-%d
+            today_ftp_date=date +%Y%m%d
+            put_local_file_to_hdfs $today_dt $today_ftp_date
+    fi
+    echo &quot;重试机制执行完毕...&quot;
+}
+
+function put_local_file_to_hdfs(){
+</code></pre></li>
+</ol>
+<pre><code>    diffFile=$log_dir&quot;differ_file&quot;$executeTime.log
+    hdfs_file_list=$log_dir&quot;hdfs_file_list&quot;$executeTime.log
+    local_file_list=$log_dir&quot;local_file_list&quot;$executeTime.log
+
+    hadoop fs -ls /apps/hive/warehouse/stage.db/$hdfs_table/dt=$1/ | awk &apos;{print $8}&apos;|while read line
+    do
+            file_name=${line##*/}
+            suffix=${file_name##*.}
+            #如果文件正在上传中，视为已经上传成功
+            if [ &quot;_COPYING_&quot; = &quot;$suffix&quot; ]
+            then
+                    echo &quot;此文件正在上传：&quot;$line
+                    file_name=${file_name%.*}
+            fi
+            echo $file_name &gt;&gt; $hdfs_file_list
+    done
+
+    ls $tmp_Dir$2 |grep $file_prefix &gt;$local_file_list
+
+    grep -vxFf $hdfs_file_list $local_file_list &gt; $diffFile
+
+    rm $hdfs_file_list
+    rm $local_file_list
+
+    file_size=cat $diffFile |wc -l
+    echo &quot;当前重试的文件个数：&quot;$file_size
+    if (( &quot;$file_size&quot; &gt;= &quot;1&quot; ))
+    then
+            #如果重试的文件大于，触发短信告警信息
+            #source ~/.base_profile
+            /soft/java/bin/java -jar /export/server/real_platform/sendmsg/sendmsg.jar &quot;15652306418,18211153576&quot; $hostname&quot;机器下有 &quot;$file_size&quot; 个文件正在重试上传，小偷程序遇到问题了，请查看！&quot;
+            echo &quot;发送短信成功！&quot;
+    fi
+
+    if [ -f $diffFile ]
+    then 
+            cat $diffFile |while read line
+                            do
+                            tarFile=$tmp_Dir$2&quot;/&quot;$line
+                            echo &quot;开始上传文件：&quot;$tarFile
+                            echo &quot;hadoop命令：hadoop fs -put &quot;$tarFile &quot;/apps/hive/warehouse/stage.db/&quot;$hdfs_table&quot;/dt=&quot;$1&quot;/&quot;
+                            hadoop fs -put $tarFile /apps/hive/warehouse/stage.db/$hdfs_table/dt=$1/
+                            echo &quot;上传文件结束：&quot;$tarFile
+                            done
+            rm $diffFile 
+    fi
+}
+</code></pre>]]></content>
+    </entry>
+    
+    <entry>
       <title><![CDATA[Linux——网络连接三种方式]]></title>
-      <url>http://spark8.tech/2016/05/16/Linux1/</url>
+      <url>http://spark8.tech/2016/05/16/Linux%E2%80%94%E2%80%94%E4%B8%89%E7%A7%8D%E7%BD%91%E7%BB%9C%E8%BF%9E%E6%8E%A5%E6%96%B9%E5%BC%8F/</url>
       <content type="html"><![CDATA[<a id="more"></a>
 <h2 id="一、NAT"><a href="#一、NAT" class="headerlink" title="一、NAT"></a>一、NAT</h2><p><img src="/images/NAT.png" alt="NAT示意图" title="NAT连接"></p>
 <h2 id="二、bridge"><a href="#二、bridge" class="headerlink" title="二、bridge"></a>二、bridge</h2><p><img src="/images/bridge.png" alt="bridge示意图"></p>
@@ -15,7 +152,7 @@
     
     <entry>
       <title><![CDATA[Shell编程——自动化软件部署脚本]]></title>
-      <url>http://spark8.tech/2016/05/15/Shell1/</url>
+      <url>http://spark8.tech/2016/05/15/Shell%E7%BC%96%E7%A8%8B%E2%80%94%E2%80%94%E8%87%AA%E5%8A%A8%E5%8C%96%E8%BD%AF%E4%BB%B6%E9%83%A8%E7%BD%B2/</url>
       <content type="html"><![CDATA[<a id="more"></a>
 <h2 id="需求描述"><a href="#需求描述" class="headerlink" title="需求描述"></a>需求描述</h2><p>开发一个脚本，实现对局域网中的N台节点批量自动下载、安装jdk</p>
 <h2 id="思路"><a href="#思路" class="headerlink" title="思路"></a>思路</h2><p>编写一个启动脚本，发送一个软件安装脚本到每一台机器<br>然后启动每台机器上的软件安装脚本来执行软件下载和安装<br><img src="/images/自动化软件部署脚本思路图.png" alt="自动化软件部署脚本思路图" title="自动化软件部署脚本思路图"></p>
