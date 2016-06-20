@@ -4,6 +4,143 @@
   
     
     <entry>
+      <title><![CDATA[Shell编程——使用HDFS Shell上传文件]]></title>
+      <url>http://spark8.tech/2016/05/17/Shell%E7%BC%96%E7%A8%8B%E2%80%94%E2%80%94%E4%BD%BF%E7%94%A8Shell%E4%B8%8A%E4%BC%A0%E6%95%B0%E6%8D%AE%E5%88%B0HDFS/</url>
+      <content type="html"><![CDATA[<a id="more"></a>
+<h2 id="需求描述"><a href="#需求描述" class="headerlink" title="需求描述"></a>需求描述</h2><p>点击流日志每天都10G，需要上传数据仓库（Hadoop HDFS）上</p>
+<h2 id="需求分析"><a href="#需求分析" class="headerlink" title="需求分析"></a>需求分析</h2><p>一般上传文件都是在凌晨24点操作，由于很多种类的业务数据都要在晚上进行传输，为了减轻服务器的压力，避开高峰期。需要伪实时的上传，即当文件有10G的时候，就上传一个。<br>一、    正常上传到hdfs的需求</p>
+<ol>
+<li>上传到hdfs的文件需要校验完整性。MD5</li>
+<li>一个文件在上传过程中另一个进程不能再次上传该文件  <em>COPY</em></li>
+<li>上传到hdfs的文件名不能相同   时间戳</li>
+<li>定时上传文件到hdfs  PUT<br>二、    异常上传的需求</li>
+<li><p>文件上传到hdfs过程中失败，需要有重试机制，<br> 若能再次连上需要保证数据能再次上传且数据不重复，也不丢失，<br> HDFS文件列表和本地待上传的文件列表进行比对<br> grep -diff<br> 若超过重试限制后需要发短信通知<br> java -jar </p>
+</li>
+<li><p>ftp服务连不上，需要有重试机制，超过重试限制需要发短信通知</p>
+</li>
+<li>运行脚本的服务器挂了，需要有备份服务器启动，并发短信通知<h2 id="实现流程"><a href="#实现流程" class="headerlink" title="实现流程"></a>实现流程</h2><h3 id="关键点"><a href="#关键点" class="headerlink" title="关键点"></a>关键点</h3></li>
+<li>HDFS SHELL:  hadoop fs  –put   xxxx.tar  /data    还可以使用 Java Api<br>  满足上传一个文件，不能满足定时、周期性传入。</li>
+<li><p>Linux crontab<br>“crontab -e <em>/5 </em> <em> </em> * $home/bin/command.sh ” //五分钟执行一次<br>系统会自动执行脚本，每五分钟一次，执行时判断文件是否等于10G，如果等于10G就可以上传。</p>
+<h3 id="代码实现"><a href="#代码实现" class="headerlink" title="代码实现"></a>代码实现</h3><p>以下为正常上传部分代码，异常上传部分未实现，只提供如上思路</p>
+<pre><code>!/bin/bash
+set java env
+export JAVA_HOME=/export/servers/jdk
+export JRE_HOME=${JAVA_HOME}/jre
+export CLASSPATH=.:${JAVA_HOME}/lib:${JRE_HOME}/lib
+export PATH=${JAVA_HOME}/bin:$PATH
+
+set hadoop env
+export HADOOP_HOME=/export/servers/hadoop
+export PATH=${HADOOP_HOME}/bin:${HADOOP_HOME}/sbin:$PATH
+</code></pre><p>日志文件存放的目录</p>
+<pre><code>log_src_dir=/export/software/
+
+s=du -k $log_src_dir |awk &apos;{print $1}&apos;
+if [ $s -lt 1024000000 ]
+then
+exit 1
+else
+continue
+fi
+</code></pre><p>待上传文件存放的目录</p>
+<pre><code>log_appending_dir=/export/data/click_log/
+</code></pre><p>日志文件上传到hdfs的根路径</p>
+<pre><code>hdfs_root_dir=/data/clickLog/20151226/
+</code></pre><p>读取日志文件的目录，判断是否有需要上传的文件</p>
+<pre><code>ls $log_src_dir | while read fileName
+do
+if [ &quot;hadoop.log1&quot; = &quot;$fileName&quot; ];then
+date=date +%Y_%m_%d_%H_%M_%S
+mv $log_src_dir$fileName $log_appending_dir&quot;xxxxx_click_log_&quot;$date
+echo $log_appending_dir&quot;xxxxx_click_log_&quot;$date &gt;&gt; /export/data/click_log/willDoing.$date
+fi
+
+done
+</code></pre><p>过滤掉正在copy和已经copy的文件</p>
+<pre><code>ls $log_appending_dir | grep will |grep -v &quot;_COPY_&quot; | grep -v &quot;_DONE_&quot; | while read line
+do
+</code></pre><p>对拿到的文件重命名</p>
+<pre><code>mv $log_appending_dir$line $log_appending_dir$line&quot;_COPY_&quot;
+cat $log_appending_dir$line&quot;_COPY_&quot; |while read line
+do
+hadoop fs -put $line $hdfs_root_dir
+done    
+mv $log_appending_dir$line&quot;_COPY_&quot;  $log_appending_dir$line&quot;_DONE_&quot;
+done
+</code></pre><p>重试核心代码</p>
+<pre><code>function failOver(){
+    echo &quot;重试机制启动....&quot;
+    #转钟逻辑处理
+    if [ &quot;00:00&quot; = $tag ] || [ &quot;00:01&quot; = $tag ]
+    then
+    yesterday_dt=date --date=&apos;yesterday&apos; +%Y-%m-%d
+    yesterday_ftp_date=date --date=&apos;yesterday&apos; +%Y%m%d
+    put_local_file_to_hdfs $yesterday_dt $yesterday_ftp_date
+    fi
+    #半小时逻辑处理
+    if [ &quot;40&quot; = $tagM ] || [ &quot;41&quot; = $tagM ]
+    then
+            today_dt=date +%Y-%m-%d
+            today_ftp_date=date +%Y%m%d
+            put_local_file_to_hdfs $today_dt $today_ftp_date
+    fi
+    echo &quot;重试机制执行完毕...&quot;
+}
+
+function put_local_file_to_hdfs(){
+</code></pre></li>
+</ol>
+<pre><code>    diffFile=$log_dir&quot;differ_file&quot;$executeTime.log
+    hdfs_file_list=$log_dir&quot;hdfs_file_list&quot;$executeTime.log
+    local_file_list=$log_dir&quot;local_file_list&quot;$executeTime.log
+
+    hadoop fs -ls /apps/hive/warehouse/stage.db/$hdfs_table/dt=$1/ | awk &apos;{print $8}&apos;|while read line
+    do
+            file_name=${line##*/}
+            suffix=${file_name##*.}
+            #如果文件正在上传中，视为已经上传成功
+            if [ &quot;_COPYING_&quot; = &quot;$suffix&quot; ]
+            then
+                    echo &quot;此文件正在上传：&quot;$line
+                    file_name=${file_name%.*}
+            fi
+            echo $file_name &gt;&gt; $hdfs_file_list
+    done
+
+    ls $tmp_Dir$2 |grep $file_prefix &gt;$local_file_list
+
+    grep -vxFf $hdfs_file_list $local_file_list &gt; $diffFile
+
+    rm $hdfs_file_list
+    rm $local_file_list
+
+    file_size=cat $diffFile |wc -l
+    echo &quot;当前重试的文件个数：&quot;$file_size
+    if (( &quot;$file_size&quot; &gt;= &quot;1&quot; ))
+    then
+            #如果重试的文件大于，触发短信告警信息
+            #source ~/.base_profile
+            /soft/java/bin/java -jar /export/server/real_platform/sendmsg/sendmsg.jar &quot;15652306418,18211153576&quot; $hostname&quot;机器下有 &quot;$file_size&quot; 个文件正在重试上传，小偷程序遇到问题了，请查看！&quot;
+            echo &quot;发送短信成功！&quot;
+    fi
+
+    if [ -f $diffFile ]
+    then 
+            cat $diffFile |while read line
+                            do
+                            tarFile=$tmp_Dir$2&quot;/&quot;$line
+                            echo &quot;开始上传文件：&quot;$tarFile
+                            echo &quot;hadoop命令：hadoop fs -put &quot;$tarFile &quot;/apps/hive/warehouse/stage.db/&quot;$hdfs_table&quot;/dt=&quot;$1&quot;/&quot;
+                            hadoop fs -put $tarFile /apps/hive/warehouse/stage.db/$hdfs_table/dt=$1/
+                            echo &quot;上传文件结束：&quot;$tarFile
+                            done
+            rm $diffFile 
+    fi
+}
+</code></pre>]]></content>
+    </entry>
+    
+    <entry>
       <title><![CDATA[Linux——网络连接三种方式]]></title>
       <url>http://spark8.tech/2016/05/16/Linux%E2%80%94%E2%80%94%E4%B8%89%E7%A7%8D%E7%BD%91%E7%BB%9C%E8%BF%9E%E6%8E%A5%E6%96%B9%E5%BC%8F/</url>
       <content type="html"><![CDATA[<a id="more"></a>
@@ -88,6 +225,324 @@ expect -c &quot;set timeout -f
 spawn ssh-copy-id $host&quot;
 done
 </code></pre>]]></content>
+    </entry>
+    
+    <entry>
+      <title><![CDATA[轻量级RPC框架（二）]]></title>
+      <url>http://spark8.tech/2016/05/12/%E8%BD%BB%E9%87%8F%E7%BA%A7RPC%E6%A1%86%E6%9E%B6(%E4%BA%8C)/</url>
+      <content type="html"><![CDATA[<a id="more"></a>
+<h2 id="设计思路"><a href="#设计思路" class="headerlink" title="设计思路"></a>设计思路</h2><p>此RPC用于Action远程调用Service，用到的技术点包括NIO通信+序列化+反射(Spring)+动态代理(Proxy类)+Zookeeper<br>设计思路如下图：<br><img src="/images/RPC%E6%A1%86%E6%9E%B6.png" alt="RPC框架" title="RPC框架"></p>
+<h2 id="工程实现"><a href="#工程实现" class="headerlink" title="工程实现"></a>工程实现</h2><p>工程目录如下：<br><img src="/images/%E5%B7%A5%E7%A8%8B%E7%9B%AE%E5%BD%95.png" alt="工程目录" title="工程目录"><br>具体实现及项目间依赖请参见<a href="www.baidu.com">github链接</a>，此处只做各模块功能说明</p>
+<h3 id="rpc-服务端"><a href="#rpc-服务端" class="headerlink" title="rpc-服务端"></a>rpc-服务端</h3><h4 id="1-rpc-sample-server模块"><a href="#1-rpc-sample-server模块" class="headerlink" title="1.  rpc-sample-server模块"></a>1.  rpc-sample-server模块</h4><p> HelloServiceImpl</p>
+<blockquote>
+<p>接口的实现类<br> RpcBootstrap<br>用户系统服务端的启动入口其意义是启动springcontext，从而构造框架中的RpcServer<br>亦即：将用户系统中所有标注了RpcService注解的业务发布到RpcServer中</p>
+<h4 id="2-rpc-server模块"><a href="#2-rpc-server模块" class="headerlink" title="2.   rpc-server模块"></a>2.   rpc-server模块</h4><p> RpcHandler<br>处理具体的业务调用<br>通过构造时传入的“业务接口及实现”handlerMap，来调用客户端所请求的业务方法<br>并将业务方法返回值封装成response对象写入下一个handler（即编码handler—— RpcEncoder）<br> RpcServer<br>框架的RPC 服务器（用于将用户系统的业务类发布为 RPC 服务）<br>使用时可由用户通过spring-bean的方式注入到用户的业务系统中<br>由于本类实现了ApplicationContextAware InitializingBeans，spring构造本对象时会调用setApplicationContext()方法，从而可以在方法中通过自定义注解获得用户的业务接口和实现，还会调用afterPropertiesSet()方法，在方法中启动netty服务器<br>RpcService<br>RPC 请求注解（标注在服务实现类上</p>
+<h4 id="3-rpc-registry模块"><a href="#3-rpc-registry模块" class="headerlink" title="3.   rpc-registry模块"></a>3.   rpc-registry模块</h4><p> Constant<br> zookeeper 常量<br> ServiceDiscovery<br>用于client发现server节点的变化 ，实现负载均衡）<br>ServiceRegistry<br>服务注册 ，ZK 在该架构中扮演了“服务注册表”的角色，用于注册所有服务器的地址与端口，并对客户端提供服务发现的功能</p>
+<h4 id="4-rpc-common-server模块"><a href="#4-rpc-common-server模块" class="headerlink" title="4.  rpc-common-server模块"></a>4.  rpc-common-server模块</h4><p>RpcDecoder<br>解码器<br>RpcEncoder<br>编码器<br>RpcRequest<br>封装 RPC 请求 ，封装发送的object的反射属性<br>RpcResponse<br>封装 RPC 响应 ，封装相应object<br>SerializationUtil<br>基于  Protostuff  实现的序列化工具类</p>
+<h4 id="5-rpc-common-interfaces模块"><a href="#5-rpc-common-interfaces模块" class="headerlink" title="5. rpc-common-interfaces模块"></a>5. rpc-common-interfaces模块</h4><p>Entity<br>封装的通信实体对象类<br>HelloService<br>客户端调用的接口类</p>
+<h3 id="rpc-客户端"><a href="#rpc-客户端" class="headerlink" title="rpc-客户端"></a>rpc-客户端</h3><h4 id="1-rpc-sample-client模块"><a href="#1-rpc-sample-client模块" class="headerlink" title="1.  rpc-sample-client模块"></a>1.  rpc-sample-client模块</h4><p>HelloActionTest<br>客户端发起调用的Action类</p>
+<h4 id="2-rpc-client模块"><a href="#2-rpc-client模块" class="headerlink" title="2.  rpc-client模块"></a>2.  rpc-client模块</h4><p>RpcClient<br>框架的RPC 客户端（用于发送 RPC 请求）<br>RpcProxy<br>RPC 代理（用于创建 RPC 服务代理）</p>
+<h4 id="3-rpc-registry模块-1"><a href="#3-rpc-registry模块-1" class="headerlink" title="3. rpc-registry模块"></a>3. rpc-registry模块</h4><p>客户端注册zk服务，同Server端</p>
+<h4 id="4-rpc-common-client模块"><a href="#4-rpc-common-client模块" class="headerlink" title="4.  rpc-common-client模块"></a>4.  rpc-common-client模块</h4><p>工具类，同Server端</p>
+<h4 id="5-rpc-common-interface模块"><a href="#5-rpc-common-interface模块" class="headerlink" title="5.  rpc-common-interface模块"></a>5.  rpc-common-interface模块</h4><p>接口类与实体类，同Server端</p>
+</blockquote>
+]]></content>
+    </entry>
+    
+    <entry>
+      <title><![CDATA[轻量级RPC框架（一）]]></title>
+      <url>http://spark8.tech/2016/05/12/%E8%BD%BB%E9%87%8F%E7%BA%A7RPC%E6%A1%86%E6%9E%B6(%E4%B8%80)/</url>
+      <content type="html"><![CDATA[<a id="more"></a>
+<h2 id="一、RPC原理"><a href="#一、RPC原理" class="headerlink" title="一、RPC原理"></a>一、RPC原理</h2><ol>
+<li><p>消息框架MQ与RPC框架区别<br>RPC（Remote Procedure Call Protocol）是面向动作的，请求响应模式。多用于系统Action层和Service层通信，缓解服务端多线程并发压力。<br>技术组成包括 NIO+序列化+反射+动态代理<br>MQ 是面向数据的，生产者消费者模式，多用于不同系统间的数据传送，面向多订阅用户的消息推送，NIO+序列化+JMS</p>
+</li>
+<li><p>什么是RPC<br>RPC（Remote Procedure Call Protocol）——远程过程调用协议，它是一种通过网络从远程计算机程序上请求服务，而不需要了解底层网络技术的协议。RPC协议假定某些传输协议的存在，如TCP或UDP，为通信程序之间携带信息数据。在OSI网络通信模型中，RPC跨越了传输层和应用层。RPC使得开发包括网络分布式多程序在内的应用程序更加容易。<br>RPC采用客户机/服务器模式。请求程序就是一个客户机，而服务提供程序就是一个服务器。首先，客户机调用进程发送一个有进程参数的调用信息到服务进程，然后等待应答信息。在服务器端，进程保持睡眠状态直到调用信息到达为止。当一个调用信息到达，服务器获得进程参数，计算结果，发送答复信息，然后等待下一个调用信息，最后，客户端调用进程接收答复信息，获得进程结果，然后调用执行继续进行。</p>
+</li>
+<li>RPC调用过程<br><img src="/images/RPC结构.png" alt="RPC调用过程" title="RPC调用过程"><h2 id="二、NIO原理"><a href="#二、NIO原理" class="headerlink" title="二、NIO原理"></a>二、NIO原理</h2><h3 id="socket-NIO原理"><a href="#socket-NIO原理" class="headerlink" title="socket NIO原理"></a>socket NIO原理</h3></li>
+<li>同步与异步，阻塞和非阻塞<br>同步与异步关注的是 消息通信机制<br>同步和异步都是基于应用程序和操作系统处理IO事件所采用的方式<br>阻塞和非阻塞是进程在访问数据的时候，数据是否准备就绪的一种处理方式。<br>阻塞和非阻塞关注的是程序在等待调用结果（消息，返回值）时的状态<br><a href="https://www.zhihu.com/question/19732473" target="_blank" rel="external">知乎链接</a></li>
+<li>NIO原理解读<br>对于网络通信而言，NIO  AIO并没有改变网络通信的基本步骤，只是在原来的基础上（serversocket，socket）做了一个改进。<br><img src="/images/NIO与传统IO.png" alt="NIO与传统IO" title="NIO与传统IO"></li>
+</ol>
+<h3 id="小结："><a href="#小结：" class="headerlink" title="小结："></a>小结：</h3><p>1）BIO阻塞的IO<br>2）NIO select多路复用+非阻塞   同步非阻塞<br>3）AIO异步非阻塞IO</p>
+<h2 id="三、netty框架"><a href="#三、netty框架" class="headerlink" title="三、netty框架"></a>三、netty框架</h2><p>使用实例见<a href="github.com/sparkliwei">github链接</a><br>总结：在使用Handler的过程中，需要注意：<br>1、ChannelInboundHandler之间的传递，通过调用 ctx.fireChannelRead(msg) 实现；调用ctx.write(msg) 将传递到ChannelOutboundHandler。<br>2、ctx.write()方法执行后，需要调用flush()方法才能令它立即执行。<br>3、流水线pipeline中outhandler不能放在最后，否则不生效</p>
+<p>如果使用addlast方法来组装handler，则为以下执行顺序：<br>// 注册两个InboundHandler，执行顺序为注册顺序，所以应该是InboundHandler1 InboundHandler2<br>// 注册两个OutboundHandler，执行顺序为注册顺序的逆序，所以应该是OutboundHandler2 OutboundHandler1</p>
+<h2 id="四、反射"><a href="#四、反射" class="headerlink" title="四、反射"></a>四、反射</h2><p>常见的是json或字符串文本转换成java对象，见以下实例,此处RPC框架开发中用Spring代替<br>        public class MyReflect {<br>            public String className = null;<br>            @SuppressWarnings(“rawtypes”)<br>            // Class 代表JVM中加载好的一个特定class文件<br>            public Class personClass = null;<br>            /**</p>
+<pre><code>     * 反射Person类
+     * @throws Exception 
+     */
+    @Before
+    public void init() throws Exception {
+        className = &quot;day04.cn.holley_04_reflect.Person&quot;;
+        // 通过Class.forName( 类全路径字符串)，就能将这个类的class文件加载到JVM内存中
+        personClass = Class.forName(className);
+    }
+    /**
+     *获取某个class文件对象
+     */
+    @Test
+    public void getClassName() throws Exception {
+        System.out.println(personClass);
+    }
+    /**
+     *获取某个class文件对象的另一种方式
+     */
+    @Test
+    public void getClassName2() throws Exception {
+        System.out.println(Person.class);
+    }
+    /**
+     *创建一个class文件表示的实例对象，底层会调用空参数的构造方法
+     */
+    @Test
+    public void getNewInstance() throws Exception {
+        System.out.println(personClass.newInstance());
+    }
+    /**
+     *获取非私有的构造函数
+     */
+    @SuppressWarnings({ &quot;rawtypes&quot;, &quot;unchecked&quot; })
+    @Test
+    public void getPublicConstructor() throws Exception {
+        Constructor  constructor  = personClass.getConstructor(Long.class,String.class);
+        Person person = (Person)constructor.newInstance(100L,&quot;zhangsan&quot;);
+        System.out.println(person.getId());
+        System.out.println(person.getName());
+    }
+    /**
+     *获得私有的构造函数
+     */
+    @SuppressWarnings({ &quot;rawtypes&quot;, &quot;unchecked&quot; })
+    @Test
+    public void getPrivateConstructor() throws Exception {
+        Constructor con = personClass.getDeclaredConstructor(String.class);
+        con.setAccessible(true);//强制取消Java的权限检测
+        Person person2 = (Person)con.newInstance(&quot;zhangsan&quot;);
+        System.out.println(&quot;**&quot;+person2.getName());
+    }
+    /**
+     *访问非私有的成员变量
+     */
+    @SuppressWarnings({ &quot;rawtypes&quot;, &quot;unchecked&quot; })
+    @Test
+    public void getNotPrivateField() throws Exception {
+        Constructor  constructor  = personClass.getConstructor(Long.class,String.class);
+        Object obj = constructor.newInstance(100L,&quot;zhangsan&quot;);
+
+        Field field = personClass.getField(&quot;name&quot;);
+        field.set(obj, &quot;lisi&quot;);
+        System.out.println(field.get(obj));
+    }
+    /**
+     *访问私有的成员变量
+     */
+    @SuppressWarnings({ &quot;rawtypes&quot;, &quot;unchecked&quot; })
+    @Test
+    public void getPrivateField() throws Exception {
+        Constructor  constructor  = personClass.getConstructor(Long.class);
+        Object obj = constructor.newInstance(100L);
+
+        Field field2 = personClass.getDeclaredField(&quot;id&quot;);
+        field2.setAccessible(true);//强制取消Java的权限检测
+        field2.set(obj,10000L);
+        System.out.println(field2.get(obj));
+    }
+    /**
+     *获取非私有的成员函数
+     */
+    @SuppressWarnings({ &quot;unchecked&quot; })
+    @Test
+    public void getNotPrivateMethod() throws Exception {
+        System.out.println(personClass.getMethod(&quot;toString&quot;));
+
+        Object obj = personClass.newInstance();//获取空参的构造函数
+        Method toStringMethod = personClass.getMethod(&quot;toString&quot;);
+        Object object = toStringMethod.invoke(obj);
+        System.out.println(object);
+    }
+    /**
+     *获取私有的成员函数
+     */
+    @SuppressWarnings(&quot;unchecked&quot;)
+    @Test
+    public void getPrivateMethod() throws Exception {
+        Object obj = personClass.newInstance();//获取空参的构造函数
+        Method method = personClass.getDeclaredMethod(&quot;getSomeThing&quot;);
+        method.setAccessible(true);
+        Object value = method.invoke(obj);
+        System.out.println(value);
+
+    }
+    /**
+     *
+     */
+    @Test
+    public void otherMethod() throws Exception {
+        //当前加载这个class文件的那个类加载器对象
+        System.out.println(personClass.getClassLoader());
+        //获取某个类实现的所有接口
+        Class[] interfaces = personClass.getInterfaces();
+        for (Class class1 : interfaces) {
+            System.out.println(class1);
+        }
+        //反射当前这个类的直接父类
+        System.out.println(personClass.getGenericSuperclass());
+        /**
+         * getResourceAsStream这个方法可以获取到一个输入流，这个输入流会关联到name所表示的那个文件上。
+         */
+        //path 不以’/&apos;开头时默认是从此类所在的包下取资源，以’/&apos;开头则是从ClassPath根下获取。其只是通过path构造一个绝对路径，最终还是由ClassLoader获取资源。
+        System.out.println(personClass.getResourceAsStream(&quot;/log4j.properties&quot;));
+        System.out.println(personClass.getResourceAsStream(&quot;log4j.properties&quot;));
+
+        //判断当前的Class对象表示是否是数组
+        System.out.println(personClass.isArray());
+        System.out.println(new String[3].getClass().isArray());
+
+        //判断当前的Class对象表示是否是枚举类
+        System.out.println(personClass.isEnum());
+        System.out.println(Class.forName(&quot;day04.cn.holley_04_reflect.City&quot;).isEnum());
+
+        //判断当前的Class对象表示是否是接口
+        System.out.println(personClass.isInterface());
+        System.out.println(Class.forName(&quot;day04.cn.holley_04_reflect.TestInterface&quot;).isInterface());
+
+
+    }
+
+}
+</code></pre><h2 id="五、动态代理"><a href="#五、动态代理" class="headerlink" title="五、动态代理"></a>五、动态代理</h2><h3 id="动态代理：在不修改原业务的基础上，基于原业务方法，进行重新的扩展，实现新的业务。"><a href="#动态代理：在不修改原业务的基础上，基于原业务方法，进行重新的扩展，实现新的业务。" class="headerlink" title="动态代理：在不修改原业务的基础上，基于原业务方法，进行重新的扩展，实现新的业务。"></a>动态代理：在不修改原业务的基础上，基于原业务方法，进行重新的扩展，实现新的业务。</h3><h3 id="例子："><a href="#例子：" class="headerlink" title="例子："></a>例子：</h3><ol>
+<li>旧业务<br>买家调用action，购买衣服，衣服在数据库的标价为50元，购买流程就是简单的调用。</li>
+<li>新业务<br>在原先的价格上可以使用优惠券，但是这个功能在以前没有实现过，我们通过代理类，代理了原先的接口方法，在这个方法的基础上，修改了返回值。<br><img src="/images/动态代理proxy.png" alt="动态代理" title="动态代理"><h3 id="实现流程："><a href="#实现流程：" class="headerlink" title="实现流程："></a>实现流程：</h3></li>
+<li>书写代理类和代理方法，在代理方法中实现代理Proxy.newProxyInstance</li>
+<li>代理中需要的参数分别为：被代理的类的类加载器soneObjectclass.getClassLoader()，被代理类的所有实现接口new Class<a href="#"></a>  Interface.class ，句柄方法new InvocationHandler()</li>
+<li>在句柄方法中复写invoke方法，invoke方法的输入有3个参数Object proxy（代理类对象）, Method method（被代理类的方法）,Object<a href="#"></a> args（被代理类方法的传入参数），在这个方法中，我们可以定制化的开发新的业务。</li>
+<li><p>获取代理类，强转成被代理的接口<br>最后，我们可以像没被代理一样，调用接口的认可方法，方法被调用后，方法名和参数列表将被传入代理类的invoke方法中，进行新业务的逻辑流程。<br>核心代码：</p>
+<pre><code>ProxySaleAction
+    /**
+     * 什么是动态代理？ 简单的写一个模板接口，剩下的个性化工作，好给动态代理来完成！
+     */
+    public class ProxySaleAction {
+
+        /**
+         *使用代理，在这个代理中，只代理了Boss的yifu方法
+         *定制化业务，可以改变原接口的参数、返回值等
+         */
+        @Test
+        public void saleByProxy() throws Exception {
+            IBoss boss = ProxyBoss.getProxy(10, IBoss.class, Boss.class);// 将代理的方法实例化成接口
+            //IBoss boss = new Boss();// 将代理的方法实例化成接口
+            System.out.println(&quot;代理经营！&quot;);
+
+            int money = boss.yifu(&quot;xxl&quot;);// 调用接口的方法，实际上调用方式没有变
+            System.out.println(&quot;衣服成交价：&quot; + money);
+        }
+    }
+SaleAction
+    public class SaleAction {
+        /**
+         * 不使用代理，直接调用方法
+         * 方法中规定什么业务，就只能调用什么业务，规定什么返回值，就只能输出什么返回值
+         */
+        @Test
+        public void saleByBossSelf() throws Exception {
+            IBoss boss = new Boss();
+            System.out.println(&quot;老板自营！&quot;);
+            int money = boss.yifu(&quot;xxl&quot;);// 老板自己卖衣服，不需要客服，结果就是没有聊天记录
+            System.out.println(&quot;衣服成交价：&quot; + money);
+        }
+    }
+ProxyBoss
+    public class ProxyBoss {
+        /**
+         * 对接口方法进行代理
+         */
+        @SuppressWarnings(&quot;unchecked&quot;)
+        public static &lt;T&gt; T getProxy(final int discountCoupon,
+                final Class&lt;?&gt; interfaceClass, final Class&lt;?&gt; implementsClass)
+                throws Exception {
+            return (T) Proxy.newProxyInstance(interfaceClass.getClassLoader(),
+                    new Class[] { interfaceClass }, new InvocationHandler() {
+                        public Object invoke(Object proxy, Method method,
+                                Object[] args) throws Throwable {
+                            Integer returnValue = (Integer) method.invoke(
+                                    implementsClass.newInstance(), args);// 调用原始对象以后返回的值
+                            return returnValue - discountCoupon;
+                        }
+                    });
+        }
+    }
+</code></pre></li>
+</ol>
+]]></content>
+    </entry>
+    
+    <entry>
+      <title><![CDATA[Redis应用-LOL盒子英雄数据排行榜]]></title>
+      <url>http://spark8.tech/2016/03/14/redis_sortedSet/</url>
+      <content type="html"><![CDATA[<a id="more"></a>
+<h2 id="需求描述"><a href="#需求描述" class="headerlink" title="需求描述"></a>需求描述</h2><p>按出场次数多少快速计算LOL中英雄排行榜</p>
+<h2 id="设计思路"><a href="#设计思路" class="headerlink" title="设计思路"></a>设计思路</h2><ol>
+<li>在redis中需要一个榜单所对应的sortedset数据</li>
+<li>玩家每选择一个英雄打一场游戏，就对sortedset数据的相应的英雄分数+1</li>
+<li>Lol盒子上查看榜单时，就调用zrange来看榜单中的排序结果<h2 id="代码开发"><a href="#代码开发" class="headerlink" title="代码开发"></a>代码开发</h2></li>
+<li><p>LolBoxPlayer</p>
+<pre><code>public class LolBoxPlayer {
+    public static void main(String[] args) throws Exception {
+
+        Jedis jedis = new Jedis(&quot;192.168.59.101&quot;, 6379);
+
+        Random random = new Random();
+        String[] heros = {&quot;易大师&quot;,&quot;德邦&quot;,&quot;剑姬&quot;,&quot;盖伦&quot;,&quot;阿卡丽&quot;,&quot;金克斯&quot;,&quot;提莫&quot;,&quot;猴子&quot;,&quot;亚索&quot;};
+        while(true){
+
+            int index = random.nextInt(heros.length);
+            //选择一个英雄
+            String hero = heros[index];
+
+            //开始玩游戏
+            Thread.sleep(1000);
+
+            //给集合中的该英雄的出场次数加1
+            //第一次添加的时候，集合不存在，zincrby方法会创建
+            jedis.zincrby(&quot;hero:ccl:phb&quot;, 1, hero);
+
+            System.out.println(hero+&quot; 出场了.......&quot;);
+        }
+    }
+}
+</code></pre></li>
+<li><p>LolBoxViewer</p>
+<pre><code>/**
+ * 英雄出场率排行榜查看模块
+ * 
+ * @author
+ * 
+ */
+public class LolBoxViewer {
+    public static void main(String[] args) throws Exception {
+        Jedis jedis = new Jedis(&quot;192.168.59.101&quot;, 6379);
+        int i = 1;
+        while (true) {
+            // 每隔3秒查看一次榜单
+            Thread.sleep(3000);
+
+            System.out.println(&quot;第&quot; + i + &quot;次查看榜单-----------&quot;);
+
+            // 从redis中查询榜单的前N名
+            Set&lt;Tuple&gt; topHeros = jedis.zrevrangeWithScores(&quot;hero:ccl:phb&quot;, 0, 4);
+
+            for (Tuple t : topHeros) {
+
+                System.out.println(t.getElement() + &quot;   &quot; + t.getScore());
+            }
+            i++;
+            System.out.println(&quot;&quot;);
+            System.out.println(&quot;&quot;);
+            System.out.println(&quot;&quot;);
+        }
+    }
+}
+</code></pre></li>
+</ol>
+]]></content>
     </entry>
     
   
