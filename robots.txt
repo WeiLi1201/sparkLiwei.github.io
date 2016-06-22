@@ -2,4 +2,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: http://spark8.tech/baidusitemap.xml
+Sitemap: http://spark8.tech/sitemap.xml
