@@ -27,7 +27,7 @@
 <blockquote>
 <p>A：整个实时日志监控项目的后台部分由flume+kafka+storm+redis+mysql组成。其中性能优化的组件主要在flume、kafka和storm。<br>第一是规范数据来源，此处应用到flume日志采集时自定义拦截器，使得日志在采集阶段即已分类，方便storm的数据处理。<br>第二是提高数据吞吐量，此处关键是kafka分片数的确定，决定分片数的主要因素是数据量，理论上kafka吞吐数据能达到600M/S，我们以300M/S来计算，10T数据需要14个分片，这也间接的决定了storm分配的spout并行度为14个。<br>第三是数据处理效率，在前面已经优化的基础上，storm处理的复杂度已大为降低，同一Topology内设置spout数等于kafka分片数，经过aped分组后，将目的bolt按字段分组(field grouping或者localorfieldgrouping)，并将bolt的executor数量设置为分组数的倍数。同一worker内 读取规则库用本地缓存减少了进程间通信次数可能带来的延迟。通过这两个措施即可提高storm的处理效率。</p>
 </blockquote>
-</div><script type="text/javascript" src="/js/share.js?v=0.0.1" async></script><a data-url="http://spark8.tech/2016/05/18/rizhijiankong2/" data-id="cipru5755000d6ew27vounpbe" class="article-share-link">分享到</a><div class="tags"><a href="/tags/storm/">storm</a><a href="/tags/kafka/">kafka</a><a href="/tags/flume/">flume</a></div><div class="post-nav"><a href="/2016/05/17/rizhijiankong1/" class="next">日志监控告警系统（一）</a></div><div id="disqus_thread"><script>var disqus_shortname = 'sparkliwei';
+</div><script type="text/javascript" src="/js/share.js?v=0.0.1" async></script><a data-url="http://spark8.tech/2016/05/18/rizhijiankong2/" data-id="cipruborq000dfrw2lvwwkzm4" class="article-share-link">分享到</a><div class="tags"><a href="/tags/storm/">storm</a><a href="/tags/kafka/">kafka</a><a href="/tags/flume/">flume</a></div><div class="post-nav"><a href="/2016/05/17/rizhijiankong1/" class="next">日志监控告警系统（一）</a></div><div id="disqus_thread"><script>var disqus_shortname = 'sparkliwei';
 var disqus_identifier = '2016/05/18/rizhijiankong2/';
 var disqus_title = '日志监控告警系统（二）';
 var disqus_url = 'http://spark8.tech/2016/05/18/rizhijiankong2/';
