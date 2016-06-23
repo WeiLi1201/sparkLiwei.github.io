@@ -597,6 +597,120 @@ public class LolBoxViewer {
 ]]></content>
     </entry>
     
+    <entry>
+      <title><![CDATA[Redis应用-购物车推荐]]></title>
+      <url>http://spark8.tech/2016/03/12/redisgouwuche/</url>
+      <content type="html"><![CDATA[<a id="more"></a>
+<h1 id="需求描述"><a href="#需求描述" class="headerlink" title="需求描述"></a>需求描述</h1><p>根据历史用户的购物车数据，对新用户的购物车做一个推荐</p>
+<h1 id="设计思路"><a href="#设计思路" class="headerlink" title="设计思路"></a>设计思路</h1><ol>
+<li>每来一个用户创建购物车，就对购物车中的每一件商品在redis中插入一条以商品名称为key的sortedset，成员为同时出现在购物车中的其他商品，分数为1</li>
+<li>每新产生一个购物车，就对车中的商品更新redis中的sortedset，将同时出现的商品的分数增1</li>
+<li><p>推荐时，用户放入一件商品到购物车，则从这件商品对应的sortedset中查询分数最高的同件商品，推荐给该用户<br><img src="/images/gouwuche.png" alt="redis实现购物车" title="redis实现购物车"></p>
+<h1 id="代码实现"><a href="#代码实现" class="headerlink" title="代码实现"></a>代码实现</h1><p>核心代码RedisServer如下，完整项目请参见<a href="github.com/sparkliwei">github链接</a></p>
+<pre><code>public class RedisService {
+
+Jedis jedis = new Jedis(GlobalInstants.REDIS_SERVER, 6379);
+
+/**
+ * 将用户选择的商品添加到购物车 同时，将购物车信息添加到推荐池
+ *
+ * @param userName
+ * @param newItem
+ */
+public void addToCart(String userName, String newItem, int incr) {
+
+    //如果该用户的购物车中已经存在该商品，那么就不需要做推荐池数据的生成或更新
+    if (!jedis.hexists(GlobalInstants.CART_PREFIX + userName, newItem)) {
+        // 首先从该用户的购物车中将已经存在的商品取出来
+        Set&lt;String&gt; oldItems = getCartItems(userName);   // oldItems : a b
+        oldItems.remove(newItem);
+
+        for (String oldItem : oldItems) {
+
+            //为新商品创建一个推荐池，将每一个老商品添加进去
+            jedis.zincrby(GlobalInstants.ITEM_RECOMMEND_POOL + newItem, 1, oldItem);
+            //为每一个老商品的推荐池添加该新商品
+            jedis.zincrby(GlobalInstants.ITEM_RECOMMEND_POOL + oldItem, 1, newItem);
+
+        }
+
+    }
+    // 往购物车中添加商品及数量，购物车存放的数据结构为hash
+    jedis.hincrBy(GlobalInstants.CART_PREFIX + userName, newItem, incr);
+
+}
+
+/**
+ * 从redis中取出用户购物车中的商品及数量
+ *
+ * @param userName
+ * @return
+ */
+public Map&lt;String, String&gt; getCart(String userName) {
+
+    Map&lt;String, String&gt; itemAndNumb = jedis.hgetAll(GlobalInstants.CART_PREFIX + userName);
+
+    return itemAndNumb;
+}
+
+/**
+ * 查询购物车中的商品项
+ *
+ * @param userName
+ * @return
+ */
+public Set&lt;String&gt; getCartItems(String userName) {
+
+    Set&lt;String&gt; items = jedis.hkeys(GlobalInstants.CART_PREFIX + userName);
+
+    return items;
+}
+
+/**
+ * 根据给定的用户根据其购物车中的商品项推荐其他商品
+ *
+ * @param userName
+ * @return
+ */
+public Map&lt;String, Double&gt; recommend(String userName) {
+
+    //先拿到该用户当前购物车中所有的商品项
+    Set&lt;String&gt; cartItems = getCartItems(userName);
+    for (String item : cartItems) {
+        // 将每一个商品项的推荐项添加到redis中的总推荐表
+        // 合并sortedset的过程中，redis会自动将相同商品的推荐得分累加
+        jedis.zunionstore(GlobalInstants.USER_RECOMMEND_POOL + userName, GlobalInstants.ITEM_RECOMMEND_POOL + item);
+
+    }
+
+    //从总推荐池去除用户购物车中已有的商品项
+    jedis.zrem(GlobalInstants.USER_RECOMMEND_POOL + userName, cartItems.toString());
+
+    //取出redis中的用户总推荐表中的前4名推荐商品
+    Set&lt;Tuple&gt; recommends = jedis.zrevrangeWithScores(GlobalInstants.USER_RECOMMEND_POOL + userName, 0, 3);
+
+    //将从redis中获取到的前4名推荐商品的名称及推荐得分封装到hashmap中返回给action
+    HashMap&lt;String, Double&gt; recommendsMap = new HashMap&lt;String, Double&gt;();
+    for (Tuple t : recommends) {
+        recommendsMap.put(t.getElement(), t.getScore());
+    }
+    return recommendsMap;
+}
+}
+</code></pre></li>
+</ol>
+]]></content>
+    </entry>
+    
+    <entry>
+      <title><![CDATA[Zookeeper-原理补充]]></title>
+      <url>http://spark8.tech/2016/03/11/zkyuanli/</url>
+      <content type="html"><![CDATA[<p>\&lt;!–more–></p>
+<h2 id="Zookepper的选举机制（保证数据一致性的核心算法paxos）"><a href="#Zookepper的选举机制（保证数据一致性的核心算法paxos）" class="headerlink" title="Zookepper的选举机制（保证数据一致性的核心算法paxos）"></a>Zookepper的选举机制（保证数据一致性的核心算法paxos）</h2><p>以一个简单的例子来说明整个选举的过程.<br>假设有五台服务器组成的zookeeper集群,它们的id从1-5,同时它们都是最新启动的,也就是没有历史数据,在存放数据量这一点上,都是一样的.假设这些服务器依序启动,来看看会发生什么.<br>1) 服务器1启动,此时只有它一台服务器启动了,它发出去的报没有任何响应,所以它的选举状态一直是LOOKING状态<br>2) 服务器2启动,它与最开始启动的服务器1进行通信,互相交换自己的选举结果,由于两者都没有历史数据,所以id值较大的服务器2胜出,但是由于没有达到超过半数以上的服务器都同意选举它(这个例子中的半数以上是3),所以服务器1,2还是继续保持LOOKING状态.<br>3) 服务器3启动,根据前面的理论分析,服务器3成为服务器1,2,3中的老大,而与上面不同的是,此时有三台服务器选举了它,所以它成为了这次选举的leader.<br>4) 服务器4启动,根据前面的分析,理论上服务器4应该是服务器1,2,3,4中最大的,但是由于前面已经有半数以上的服务器选举了服务器3,所以它只能接收当小弟的命了.<br>5) 服务器5启动,同4一样,当小弟.</p>
+<h2 id="非全新集群的选举机制-数据恢复"><a href="#非全新集群的选举机制-数据恢复" class="headerlink" title="非全新集群的选举机制(数据恢复)"></a>非全新集群的选举机制(数据恢复)</h2><p>那么，初始化的时候，是按照上述的说明进行选举的，但是当zookeeper运行了一段时间之后，有机器down掉，重新选举时，选举过程就相对复杂了。<br>需要加入数据version、leader id和逻辑时钟。<br>数据version：数据新的version就大，数据每次更新都会更新version。<br>Leader id：就是我们配置的myid中的值，每个机器一个。<br>逻辑时钟：这个值从0开始递增,每次选举对应一个值,也就是说:  如果在同一次选举中,那么这个值应该是一致的 ;  逻辑时钟值越大,说明这一次选举leader的进程更新.<br>选举的标准就变成：<br>1、逻辑时钟小的选举结果被忽略，重新投票<br>2、统一逻辑时钟后，数据id大的胜出<br>3、数据id相同的情况下，leader id大的胜出<br>根据这个规则选出leader。</p>
+]]></content>
+    </entry>
+    
   
   
 </search>

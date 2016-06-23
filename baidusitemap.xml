@@ -4,6 +4,46 @@
 
     
   <url>
+    <loc>http://spark8.tech/2016/03/11/zkyuanli/</loc>
+    <lastmod>2016-06-23T11:28:54.000Z</lastmod>
+    <data>
+        <display>
+        <title>Zookeeper-原理补充</title>
+        <pubTime>2016-03-11T05:25:22.000Z</pubTime>
+        
+        <tag>zookeeper</tag>
+         
+         
+           
+             
+              <breadCrumb title="zookeeper" url="http://spark8.tech/categories/zookeeper/"/>
+          
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
+    <loc>http://spark8.tech/2016/03/12/redisgouwuche/</loc>
+    <lastmod>2016-06-23T11:28:19.000Z</lastmod>
+    <data>
+        <display>
+        <title>Redis应用-购物车推荐</title>
+        <pubTime>2016-03-12T05:25:22.000Z</pubTime>
+        
+        <tag>redis</tag>
+         
+         
+           
+             
+              <breadCrumb title="redis" url="http://spark8.tech/categories/redis/"/>
+          
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
     <loc>http://spark8.tech/2016/05/18/rizhijiankong2/</loc>
     <lastmod>2016-06-23T01:00:07.000Z</lastmod>
     <data>
@@ -11,9 +51,9 @@
         <title>日志监控告警系统（二）</title>
         <pubTime>2016-05-18T02:25:22.000Z</pubTime>
         
-        <tag>storm</tag>
-         
         <tag>kafka</tag>
+         
+        <tag>storm</tag>
          
         <tag>flume</tag>
          
@@ -36,9 +76,9 @@
         <title>日志监控告警系统（一）</title>
         <pubTime>2016-05-17T15:25:22.000Z</pubTime>
         
-        <tag>storm</tag>
-         
         <tag>kafka</tag>
+         
+        <tag>storm</tag>
          
         <tag>mysql</tag>
          
