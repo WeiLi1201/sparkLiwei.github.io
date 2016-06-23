@@ -4,8 +4,43 @@
   
     
     <entry>
+      <title><![CDATA[日志监控告警系统（二）]]></title>
+      <url>http://spark8.tech/2016/05/18/rizhijiankong2/</url>
+      <content type="html"><![CDATA[<a id="more"></a>
+<p>#基于实时日志监控业务的一些考虑<br>Q: 业务对于时效的要求，要怎样的采集方式？</p>
+<blockquote>
+<p>A:  实时采集不断读取各日志服务器日志</p>
+</blockquote>
+<p>Q: 日志数据的来源有哪些，数据量有多大？</p>
+<blockquote>
+<p>A:  日志来自8个业务系统(订单系统、商品系统等)，假设各系统每天产生的日志总和为1T。那么平均20M/s，晚上少流量，正常40M/s，类似双11促销峰值10倍400M/s,不考虑未来有可能数据增加到10T，仅以当下数据量来说。设计目标是使用大量低速高容量的硬盘短时间内存储更多的数据。而单机硬盘默认2T，增加2T硬盘使得每个机器达到4T。1T的数据保存5天，备份一份，就是10T空间，基本上3台机器可以满足。<br>就经验上来说，对于小于10T的数据量，3台4T的机器足以，不要过度设计和考虑容量问题，毕竟日志的存储天数可以调的，要考虑成本。</p>
+</blockquote>
+<p>Q：如何实现对日志的清洗、过滤处理？</p>
+<blockquote>
+<p>A：日志来自8个系统的日志，存储在专门的日志服务器集群中，每个系统都有一个flume的agent，source中添加拦截器，区分来自各个系统的aped，然后sink到kafka集群。LogMonitorTopology通过于flume sink相同的zk配置从Kafka-spout获取外部数据源。FileterBolt调用message.parse方法对消息进行合法性检验，<br><img src="/images/messageparse.png" alt="" title="messageparse"></p>
+</blockquote>
+<p>Q：过滤后的数据是为了实现怎样的业务目的，要匹配怎样的处理规则？</p>
+<blockquote>
+<p>A：根据各个appid得知此消息属于哪个业务系统，从mysq中取出该系统对应的ruleList缓存至worker进程，用消息去匹配规则列表，匹配成功则向该系统管理员发送邮件或者短信。而为什么在worker进程里面都保存一份而不是存redis全局共享一份，是因为每个进程内都条记录处理都需要pull一次，有大量的进程间通信，消耗性能。<br><img src="/images/messagetrigger.png" alt="" title="messagetrigger"></p>
+</blockquote>
+<p>Q：错误信息经常是好几条日志信息一起出现的，怎么解决重复发送邮件的问题？</p>
+<blockquote>
+<p>A:  业务就是为了保证不重复发送邮件通知，基于业务本身，将appid+触发的ruleid生成唯一的key存入redis，每次发送消息前先去redis中检查，因为只有极少的日志携带规则的信息，所以此处用redis没问题。<br><img src="/images/messageexe.png" alt="" title="messagecf"></p>
+</blockquote>
+<p>Q:  集群模式下如何保证数据匹配的规则的数据一致性？</p>
+<blockquote>
+<p>A:  程序启动时初始化规则列表，并采用定时更新规则数据的策略，但定时任务在运行时必涉及线程安全（如2个worker进程，10个Bolt的并行度，则每个worker中必有5个bolt task运行）通过加锁和开关实现线程安全控制。<br><img src="/images/messagebxd.png" alt="规则线程安全图" title="messagebxd"><br><img src="/images/messagekgs.png" alt="" title="messagekgs"></p>
+</blockquote>
+<p>Q：最后，在实现了各个环节的功能后，如何优化整体性能？</p>
+<blockquote>
+<p>A：整个实时日志监控项目的后台部分由flume+kafka+storm+redis+mysql组成。其中性能优化的组件主要在flume、kafka和storm。<br>第一是规范数据来源，此处应用到flume日志采集时自定义拦截器，使得日志在采集阶段即已分类，方便storm的数据处理。<br>第二是提高数据吞吐量，此处关键是kafka分片数的确定，决定分片数的主要因素是数据量，理论上kafka吞吐数据能达到600M/S，我们以300M/S来计算，10T数据需要14个分片，这也间接的决定了storm分配的spout并行度为14个。<br>第三是数据处理效率，在前面已经优化的基础上，storm处理的复杂度已大为降低，同一Topology内设置spout数等于kafka分片数，经过aped分组后，将目的bolt按字段分组(field grouping或者localorfieldgrouping)，并将bolt的executor数量设置为分组数的倍数。同一worker内 读取规则库用本地缓存减少了进程间通信次数可能带来的延迟。通过这两个措施即可提高storm的处理效率。</p>
+</blockquote>
+]]></content>
+    </entry>
+    
+    <entry>
       <title><![CDATA[日志监控告警系统（一）]]></title>
-      <url>http://spark8.tech/2016/05/17/%E5%AE%9E%E6%97%B6%E6%97%A5%E5%BF%97%E7%9B%91%E6%8E%A7%E7%B3%BB%E7%BB%9F(%E4%B8%80)/</url>
+      <url>http://spark8.tech/2016/05/17/rizhijiankong1/</url>
       <content type="html"><![CDATA[<a id="more"></a>
 <h2 id="需求分析"><a href="#需求分析" class="headerlink" title="需求分析"></a>需求分析</h2><p>随着公司业务发展，支撑公司业务的各种系统越来越多，为了保证公司的业务正常发展，急需要对这些线上系统的运行进行监控，做到问题的及时发现和处理，最大程度减少对业务的影响。<br>目前系统分类有：<br>1)    有基于Tomcat的web应用<br>2)    有独立的Java Application应用<br>3)    有运行在linux上的脚本程序<br>4)    有大规模的集群框架（zookeeper、Hadoop、Storm…）<br>5)    有操作系统的运行日志<br>主要功能需求分为：<br>监控系统日志中的内容，按照一定规则进行过滤<br>发现问题之后通过短信和邮件进行告警</p>
 <h2 id="功能分析"><a href="#功能分析" class="headerlink" title="功能分析"></a>功能分析</h2><p>数据输入<br>使用flume客户端获取个系统的数据；<br>用户通过页面输入系统名称、负责人触发规则等信息<br>数据存储<br>使用flume采集数据并存放在kafka集群中<br>数据计算<br>使用storm编写程序对日志进行过滤，将满足过滤规则的信息，通过邮件短信告警并保存到数据库中<br>数据展示<br>管理页面可以查看触发规则的信息，系统负责人，联系方式，触发信息明细等</p>
