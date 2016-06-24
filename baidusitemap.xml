@@ -4,6 +4,68 @@
 
     
   <url>
+    <loc>http://spark8.tech/2016/04/12/tjxt/</loc>
+    <lastmod>2016-06-24T05:12:10.000Z</lastmod>
+    <data>
+        <display>
+        <title>推荐系统——User CF vs. Item CF</title>
+        <pubTime>2016-04-12T08:25:22.000Z</pubTime>
+        
+        <tag>storm</tag>
+         
+        <tag>推荐系统</tag>
+         
+         
+           
+             
+              <breadCrumb title="storm" url="http://spark8.tech/categories/storm/"/>
+          
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
+    <loc>http://spark8.tech/2016/03/11/zkfbs/</loc>
+    <lastmod>2016-06-24T00:31:02.000Z</lastmod>
+    <data>
+        <display>
+        <title>Zookeeper-服务器上下线动态感知</title>
+        <pubTime>2016-03-11T08:25:22.000Z</pubTime>
+        
+        <tag>zookeeper</tag>
+         
+         
+           
+             
+              <breadCrumb title="zookeeper" url="http://spark8.tech/categories/zookeeper/"/>
+          
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
+    <loc>http://spark8.tech/2016/03/11/zkfbss/</loc>
+    <lastmod>2016-06-24T00:23:23.000Z</lastmod>
+    <data>
+        <display>
+        <title>Zookeeper-分布式共享锁</title>
+        <pubTime>2016-03-11T08:25:22.000Z</pubTime>
+        
+        <tag>zookeeper</tag>
+         
+         
+           
+             
+              <breadCrumb title="zookeeper" url="http://spark8.tech/categories/zookeeper/"/>
+          
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
     <loc>http://spark8.tech/2016/03/11/zkyuanli/</loc>
     <lastmod>2016-06-23T11:28:54.000Z</lastmod>
     <data>
@@ -51,9 +113,9 @@
         <title>日志监控告警系统（二）</title>
         <pubTime>2016-05-18T02:25:22.000Z</pubTime>
         
-        <tag>kafka</tag>
-         
         <tag>storm</tag>
+         
+        <tag>kafka</tag>
          
         <tag>flume</tag>
          
@@ -76,9 +138,9 @@
         <title>日志监控告警系统（一）</title>
         <pubTime>2016-05-17T15:25:22.000Z</pubTime>
         
-        <tag>kafka</tag>
-         
         <tag>storm</tag>
+         
+        <tag>kafka</tag>
          
         <tag>mysql</tag>
          

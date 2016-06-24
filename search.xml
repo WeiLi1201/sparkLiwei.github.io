@@ -527,6 +527,17 @@ ProxyBoss
     </entry>
     
     <entry>
+      <title><![CDATA[推荐系统——User CF vs. Item CF]]></title>
+      <url>http://spark8.tech/2016/04/12/tjxt/</url>
+      <content type="html"><![CDATA[<a id="more"></a>
+<h1 id="计算复杂度"><a href="#计算复杂度" class="headerlink" title="计算复杂度"></a>计算复杂度</h1><p>Item CF 和 User CF 是基于协同过滤推荐的两个最基本的算法，User CF 是很早以前就提出来了，Item CF 是从 Amazon 的论文和专利发表之后（2001 年左右）开始流行，大家都觉得 Item CF 从性能和复杂度上比 User CF 更优，<strong>其中的一个主要原因就是对于一个在线网站，用户的数量往往大大超过物品的数量，同时物品的数据相对稳定，因此计算物品的相似度不但计算量较小，同时 也不必频繁更新。但我们往往忽略了这种情况只适应于提供商品的电子商务网站，对于新闻，博客或者微内容的推荐系统，情况往往是相反的，物品的数量是海量 的，同时也是更新频繁的，所以单从复杂度的角度，这两个算法在不同的系统中各有优势，推荐引擎的设计者需要根据自己应用的特点选择更加合适的算法。</strong></p>
+<h1 id="适用场景"><a href="#适用场景" class="headerlink" title="适用场景"></a>适用场景</h1><p>在非社交网络的网站中，内容内在的联系是很重要的推荐原则，它比基于相似用户的推荐原则更加有效。比如在购书网站上，当你看一本书的时候，推荐引擎 会给你推荐相关的书籍，这个推荐的重要性远远超过了网站首页对该用户的综合推荐。可以看到，在这种情况下，Item CF 的推荐成为了引导用户浏览的重要手段。同时 Item CF 便于为推荐做出解释，在一个非社交网络的网站中，给某个用户推荐一本书，同时给出的解释是某某和你有相似兴趣的人也看了这本书，这很难让用户信服，因为用 户可能根本不认识那个人；但如果解释说是因为这本书和你以前看的某本书相似，用户可能就觉得合理而采纳了此推荐。相反的，在现今很流行的社交网络站点中，User CF 是一个更不错的选择，User CF 加上社会网络信息，可以增加用户对推荐解释的信服程度。</p>
+<h1 id="推荐多样性和精度"><a href="#推荐多样性和精度" class="headerlink" title="推荐多样性和精度"></a>推荐多样性和精度</h1><p>研究推荐引擎的学者们在相同的数据集合上分别用 User CF 和 Item CF 计算推荐结果，发现推荐列表中，只有 50% 是一样的，还有 50% 完全不同。但是这两个算法确有相似的精度，所以可以说，这两个算法是很互补的。<br>关于推荐的多样性，有两种度量方法：<br>第一种度量方法是从单个用户的角度度量，就是说给定一个用户，查看系统给出的推荐列表是否多样，也就是要比较推荐列表中的物品之间两两的相似度，不 难想到，对这种度量方法，Item CF 的多样性显然不如 User CF 的好，因为 Item CF 的推荐就是和以前看的东西最相似的。<br>第二种度量方法是考虑系统的多样性，也被称为覆盖率 (Coverage)，它是指一个推荐系统是否能够提供给所有用户丰富的选择。在这种指标下，Item CF 的多样性要远远好于 User CF, 因为 User CF 总是倾向于推荐热门的，从另一个侧面看，也就是说，Item CF 的推荐有很好的新颖性，很擅长推荐长尾里的物品。所以，尽管大多数情况，Item CF 的精度略小于 User CF， 但如果考虑多样性，Item CF 却比 User CF 好很多。<br>如果你对推荐的多样性还心存疑惑，那么下面我们再举个实例看看 User CF 和 Item CF 的多样性到底有什么差别。<br>首先，假设每个用户兴趣爱好都是广泛的，喜欢好几个领域的东西，不过每个用户肯定也有一个主要的领域，对这个领域会比其他领域更加关心。<br>给定一个用户，假设他喜欢 3 个领域 A,B,C，A 是他喜欢的主要领域，这个时候我们来看 User CF 和 Item CF 倾向于做出什么推荐：如果用 User CF, 它会将 A,B,C 三个领域中比较热门的东西推荐给用户；而如果用 ItemCF，它会基本上只推荐 A 领域的东西给用户。所以我们看到因为 User CF 只推荐热门的，所以它在推荐长尾里项目方面的能力不足；而 Item CF 只推荐 A 领域给用户，这样他有限的推荐列表中就可能包含了一定数量的不热门的长尾物品，同时 Item CF 的推荐对这个用户而言，显然多样性不足。但是对整个系统而言，因为不同的用户的主要兴趣点不同，所以系统的覆盖率会比较好。<br>从上面的分析，可以很清晰的看到，这两种推荐都有其合理性，但都不是最好的选择，因此他们的精度也会有损失。其实对这类系统的最好选择是，如果系统 给这个用户推荐 30 个物品，既不是每个领域挑选 10 个最热门的给他，也不是推荐 30 个 A 领域的给他，而是比如推荐 15 个 A 领域的给他，剩下的 15 个从 B,C 中选择。所以结合 User CF 和 Item CF 是最优的选择，结合的基本原则就是当采用 Item CF 导致系统对个人推荐的多样性不足时，我们通过加入 User CF 增加个人推荐的多样性，从而提高精度，而当因为采用 User CF 而使系统的整体多样性不足时，我们可以通过加入 Item CF 增加整体的多样性，同样同样可以提高推荐的精度。</p>
+<h1 id="用户对推荐算法的适应度"><a href="#用户对推荐算法的适应度" class="headerlink" title="用户对推荐算法的适应度"></a>用户对推荐算法的适应度</h1><p>前面我们大部分都是从推荐引擎的角度考虑哪个算法更优，但其实我们更多的应该考虑作为推荐引擎的最终使用者 – 应用用户对推荐算法的适应度。<br>对于 User CF，推荐的原则是假设用户会喜欢那些和他有相同喜好的用户喜欢的东西，但如果一个用户没有相同喜好的朋友，那 User CF 的算法的效果就会很差，所以一个用户对的 CF 算法的适应度是和他有多少共同喜好用户成正比的。<br>Item CF 算法也有一个基本假设，就是用户会喜欢和他以前喜欢的东西相似的东西，那么我们可以计算一个用户喜欢的物品的自相似度。一个用户喜欢物品的自相似度大，就 说明他喜欢的东西都是比较相似的，也就是说他比较符合 Item CF 方法的基本假设，那么他对 Item CF 的适应度自然比较好；反之，如果自相似度小，就说明这个用户的喜好习惯并不满足 Item CF 方法的基本假设，那么对于这种用户，用 Item CF 方法做出好的推荐的可能性非常低。</p>
+]]></content>
+    </entry>
+    
+    <entry>
       <title><![CDATA[Redis应用-LOL盒子英雄数据排行榜]]></title>
       <url>http://spark8.tech/2016/03/14/redis_sortedSet/</url>
       <content type="html"><![CDATA[<a id="more"></a>
@@ -700,6 +711,243 @@ public Map&lt;String, Double&gt; recommend(String userName) {
 </code></pre></li>
 </ol>
 ]]></content>
+    </entry>
+    
+    <entry>
+      <title><![CDATA[Zookeeper-分布式共享锁]]></title>
+      <url>http://spark8.tech/2016/03/11/zkfbss/</url>
+      <content type="html"><![CDATA[<a id="more"></a>
+<h2 id="一、需求描述"><a href="#一、需求描述" class="headerlink" title="一、需求描述"></a>一、需求描述</h2><p>  在我们自己的分布式业务系统中，可能会存在某种资源，需要被整个系统的各台服务器共享访问，但是只允许一台服务器同时访问</p>
+<h2 id="二、设计思路"><a href="#二、设计思路" class="headerlink" title="二、设计思路"></a>二、设计思路</h2><ol>
+<li>连接zookeeper，process监听子节点变化事件，接收事件按规则写业务逻辑，并重新注册锁</li>
+<li>向zookeeper注册一把锁</li>
+<li>从zk的锁父目录下，获取所有子节点，并且注册对父节点的监听</li>
+<li>如果争抢资源的程序就只有自己，则可以直接去访问共享资源</li>
+<li>访问资源后删除锁<h2 id="三、代码开发"><a href="#三、代码开发" class="headerlink" title="三、代码开发"></a>三、代码开发</h2>   public class DistributedClientLock {</li>
+</ol>
+<pre><code>       // 会话超时
+       private static final int SESSION_TIMEOUT = 2000;
+       // zookeeper集群地址
+       private String hosts = &quot;mini1:2181,mini2:2181,mini3:2181&quot;;
+       private String groupNode = &quot;locks&quot;;
+       private String subNode = &quot;sub&quot;;
+       private boolean haveLock = false;
+
+       private ZooKeeper zk;
+       // 记录自己创建的子节点路径
+       private volatile String thisPath;
+
+       /**
+        * 连接zookeeper
+        */
+       public void connectZookeeper() throws Exception {
+           zk = new ZooKeeper(hosts, SESSION_TIMEOUT, new Watcher() {
+               public void process(WatchedEvent event) {
+                   try {
+
+                       // 判断事件类型，此处只处理子节点变化事件
+                       if (event.getType() == EventType.NodeChildrenChanged &amp;&amp; event.getPath().equals(&quot;/&quot; + groupNode)) {
+                           //获取子节点，并对父节点进行监听
+                           List&lt;String&gt; childrenNodes = zk.getChildren(&quot;/&quot; + groupNode, true);
+                           String thisNode = thisPath.substring((&quot;/&quot; + groupNode + &quot;/&quot;).length());
+                           // 去比较是否自己是最小id
+                           Collections.sort(childrenNodes);
+                           if (childrenNodes.indexOf(thisNode) == 0) {
+                               //访问共享资源处理业务，并且在处理完成之后删除锁
+                               doSomething();
+
+                               //重新注册一把新的锁
+                               thisPath = zk.create(&quot;/&quot; + groupNode + &quot;/&quot; + subNode, null, Ids.OPEN_ACL_UNSAFE,
+                                       CreateMode.EPHEMERAL_SEQUENTIAL);
+                           }
+                       }
+                   } catch (Exception e) {
+                       e.printStackTrace();
+                   }
+               }
+           });
+
+           // 1、程序一进来就先注册一把锁到zk上
+           thisPath = zk.create(&quot;/&quot; + groupNode + &quot;/&quot; + subNode, null, Ids.OPEN_ACL_UNSAFE,
+                   CreateMode.EPHEMERAL_SEQUENTIAL);
+
+           // wait一小会，便于观察
+           Thread.sleep(new Random().nextInt(1000));
+
+           // 从zk的锁父目录下，获取所有子节点，并且注册对父节点的监听
+           List&lt;String&gt; childrenNodes = zk.getChildren(&quot;/&quot; + groupNode, true);
+
+           // 如果争抢资源的程序就只有自己，则可以直接去访问共享资源 
+           if (childrenNodes.size() == 1) {
+               doSomething();
+               thisPath = zk.create(&quot;/&quot; + groupNode + &quot;/&quot; + subNode, null, Ids.OPEN_ACL_UNSAFE,
+                       CreateMode.EPHEMERAL_SEQUENTIAL);
+           }
+       }
+
+       /**
+        * 处理业务逻辑，并且在最后释放锁
+        */
+       private void doSomething() throws Exception {
+           try {
+               System.out.println(&quot;gain lock: &quot; + thisPath);
+               Thread.sleep(2000);
+               // do something
+           } finally {
+               System.out.println(&quot;finished: &quot; + thisPath);
+       //删除之前的锁节点
+               zk.delete(this.thisPath, -1);
+           }
+       }
+
+       public static void main(String[] args) throws Exception {
+           DistributedClientLock dl = new DistributedClientLock();
+           dl.connectZookeeper();
+           Thread.sleep(Long.MAX_VALUE);
+       }
+
+
+}
+</code></pre>]]></content>
+    </entry>
+    
+    <entry>
+      <title><![CDATA[Zookeeper-服务器上下线动态感知]]></title>
+      <url>http://spark8.tech/2016/03/11/zkfbs/</url>
+      <content type="html"><![CDATA[<a id="more"></a>
+<p>Zookeeper是一个分布式协调服务<br>在底层其实只提供了两个功能：<br><em>a、管理(存储，读取)用户程序提交的数据；PERSISTANT持久节点</em><br><em>b、并为用户程序提供数据节点监听服务； Ephemeral节点</em></p>
+<h2 id="一、需求描述"><a href="#一、需求描述" class="headerlink" title="一、需求描述"></a>一、需求描述</h2><p>某分布式系统中，主节点可以有多台，可以动态上下线<br>任意一台客户端都能实时感知到主节点服务器的上下线</p>
+<h2 id="二、设计思路"><a href="#二、设计思路" class="headerlink" title="二、设计思路"></a>二、设计思路</h2><p><img src="/images/zkfbs.png" alt="分布式共享锁" title="分布式共享锁"></p>
+<h2 id="三、代码开发"><a href="#三、代码开发" class="headerlink" title="三、代码开发"></a>三、代码开发</h2><h3 id="1-客户端实现"><a href="#1-客户端实现" class="headerlink" title="1. 客户端实现"></a>1. 客户端实现</h3><pre><code>  public class DistributedClient {
+      private static final String connectString = &quot;mini1:2181,mini2:2181,mini3:2181&quot;;
+      private static final int sessionTimeout = 2000;
+      private static final String parentNode = &quot;/servers&quot;;
+      // 注意:加volatile的意义何在？先写再读，保证读的结果一致
+      private volatile List&lt;String&gt; serverList;
+      private ZooKeeper zk = null;
+
+      /**
+       * 创建到zk的客户端连接
+       * 
+       * @throws Exception
+       */
+      public void getConnect() throws Exception {
+          zk = new ZooKeeper(connectString, sessionTimeout, new Watcher() {
+              public void process(WatchedEvent event) {
+              // 收到事件通知后的回调函数（应该是我们自己的事件处理逻辑）
+                  try {
+                      //重新更新服务器列表，并且注册了监听
+                      getServerList();
+                  } catch (Exception e) {
+                  }
+              }
+              });
+      }
+
+      /**
+       * 获取服务器信息列表
+       * 
+       * @throws Exception
+       */
+      public void getServerList() throws Exception {
+          // 获取服务器子节点信息，并且对父节点进行监听
+          List&lt;String&gt; children = zk.getChildren(parentNode, true);
+
+          // 先创建一个局部的list来存服务器信息
+          List&lt;String&gt; servers = new ArrayList&lt;String&gt;();
+          for (String child : children) {
+              // child只是子节点的节点名
+              byte[] data = zk.getData(parentNode + &quot;/&quot; + child, false, null);
+              servers.add(new String(data));
+          }
+          // 把servers赋值给成员变量serverList，已提供给各业务线程使用
+          serverList = servers;
+
+          //打印服务器列表
+          System.out.println(serverList);
+      }
+
+      /**
+       * 业务功能
+       * @throws InterruptedException
+       */
+      public void handleBussiness() throws InterruptedException {
+          System.out.println(&quot;client start working.....&quot;);
+          Thread.sleep(Long.MAX_VALUE);
+      }
+
+      public static void main(String[] args) throws Exception {
+          // 获取zk连接
+          DistributedClient client = new DistributedClient();
+          client.getConnect();
+          // 获取servers的子节点信息（并监听），从中获取服务器信息列表
+          client.getServerList();
+          // 业务线程启动
+          client.handleBussiness();
+      }
+}
+</code></pre><h3 id="2-服务端实现"><a href="#2-服务端实现" class="headerlink" title="2. 服务端实现"></a>2. 服务端实现</h3><pre><code>  public class DistributedServer {
+
+    private static final String CONNECT_STRING   = &quot;mini1:2181,mini2:2181,mini3:2181&quot;;
+    private static final int    SESSION_TIME_OUT = 2000;
+    private static final String PARENT_NODE      = &quot;/servers&quot;;
+
+    private ZooKeeper zk = null;
+
+    /**
+     * 创建到zk的客户端连接
+     *
+     * @throws Exception
+     */
+    public void getConnect() throws Exception {
+
+        zk = new ZooKeeper(CONNECT_STRING, SESSION_TIME_OUT, new Watcher() {
+            public void process(WatchedEvent event) {
+                // 收到事件通知后的回调函数（应该是我们自己的事件处理逻辑）
+                System.out.println(event.getType() + &quot;---&quot; + event.getPath());
+                /*try {
+            zk.getChildren(&quot;/&quot;, true);
+        } catch (Exception e) {
+        }*/
+            }
+        });
+    }
+
+    /**
+     * 向zk集群注册服务器信息
+     * @param hostname
+     * @throws Exception
+     */
+    public void registerServer(String hostname) throws Exception {
+        Stat exists = zk.exists(PARENT_NODE, false);
+        if (exists == null) zk.create(PARENT_NODE, null, Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+        String path = zk.create(PARENT_NODE + &quot;/server&quot;, hostname.getBytes(), Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL_SEQUENTIAL);
+        System.out.println(hostname + &quot;is online..&quot; + path);
+    }
+
+    /**
+     * 业务功能
+     * @throws InterruptedException
+     */
+    public void handleBussiness(String hostname) throws InterruptedException {
+        System.out.println(hostname + &quot;start working.....&quot;);
+        Thread.sleep(Long.MAX_VALUE);
+    }
+
+    public static void main(String[] args) throws Exception {
+
+        DistributedServer server = new DistributedServer();
+        // 获取zk连接
+        server.getConnect();
+
+        // 利用zk连接注册服务器信息(主机名)
+        server.registerServer(args[0]);
+
+        // 启动业务功能
+        server.handleBussiness(args[0]);
+    }
+}
+</code></pre>]]></content>
     </entry>
     
     <entry>
