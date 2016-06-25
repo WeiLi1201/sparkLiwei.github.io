@@ -1059,7 +1059,7 @@ public Map&lt;String, Double&gt; recommend(String userName) {
     </entry>
     
     <entry>
-      <title><![CDATA[自定义GroupingComparator分组取Top1]]></title>
+      <title><![CDATA[Hadoop2.x————自定义GroupingComparator分组取Top1]]></title>
       <url>http://spark8.tech/2015/10/13/groupingCompa/</url>
       <content type="html"><![CDATA[<a id="more"></a>
 <h1 id="需求描述"><a href="#需求描述" class="headerlink" title="需求描述"></a>需求描述</h1><p>有如下订单数据<br><img src="/images/ddsj.png" alt="" title="ddsj"><br>现在需要求出每一个订单中成交金额最大的一笔交易</p>
