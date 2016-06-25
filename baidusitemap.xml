@@ -4,6 +4,109 @@
 
     
   <url>
+    <loc>http://spark8.tech/2016/06/25/flumetuomin/</loc>
+    <lastmod>2016-06-25T12:20:27.000Z</lastmod>
+    <data>
+        <display>
+        <title></title>
+        <pubTime>2016-06-25T12:18:48.000Z</pubTime>
+        
+         
+           
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
+    <loc>http://spark8.tech/2015/10/24/flumerizhi/</loc>
+    <lastmod>2016-06-25T12:12:45.000Z</lastmod>
+    <data>
+        <display>
+        <title>Flume——日志采集与汇总</title>
+        <pubTime>2015-10-24T13:12:12.000Z</pubTime>
+        
+        <tag>hadoop</tag>
+         
+        <tag>flume</tag>
+         
+         
+           
+             
+              <breadCrumb title="hadoop" url="http://spark8.tech/categories/hadoop/"/>
+          
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
+    <loc>http://spark8.tech/2015/10/20/transform/</loc>
+    <lastmod>2016-06-25T12:00:27.000Z</lastmod>
+    <data>
+        <display>
+        <title>Hive——transform</title>
+        <pubTime>2015-10-20T08:12:12.000Z</pubTime>
+        
+        <tag>hadoop</tag>
+         
+        <tag>hive</tag>
+         
+         
+           
+             
+              <breadCrumb title="hadoop" url="http://spark8.tech/categories/hadoop/"/>
+          
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
+    <loc>http://spark8.tech/2015/10/18/hivejilian/</loc>
+    <lastmod>2016-06-25T11:57:31.000Z</lastmod>
+    <data>
+        <display>
+        <title>Hive——级联求和accumulate</title>
+        <pubTime>2015-10-18T04:12:12.000Z</pubTime>
+        
+        <tag>hadoop</tag>
+         
+        <tag>hive</tag>
+         
+         
+           
+             
+              <breadCrumb title="hadoop" url="http://spark8.tech/categories/hadoop/"/>
+          
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
+    <loc>http://spark8.tech/2015/10/19/udf/</loc>
+    <lastmod>2016-06-25T11:56:42.000Z</lastmod>
+    <data>
+        <display>
+        <title>Hive ——内置函数与UDF实现</title>
+        <pubTime>2015-10-19T08:12:12.000Z</pubTime>
+        
+        <tag>hadoop</tag>
+         
+        <tag>hive</tag>
+         
+         
+           
+             
+              <breadCrumb title="hadoop" url="http://spark8.tech/categories/hadoop/"/>
+          
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
     <loc>http://spark8.tech/2015/10/13/groupingCompa/</loc>
     <lastmod>2016-06-25T11:32:09.000Z</lastmod>
     <data>
@@ -325,11 +428,11 @@
         <title>日志监控告警系统（二）</title>
         <pubTime>2016-05-18T02:25:22.000Z</pubTime>
         
+        <tag>flume</tag>
+         
         <tag>storm</tag>
          
         <tag>kafka</tag>
-         
-        <tag>flume</tag>
          
          
            

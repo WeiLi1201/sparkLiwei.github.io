@@ -2,6 +2,41 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   
   <url>
+    <loc>http://spark8.tech/2016/06/25/flumetuomin/</loc>
+    
+    <lastmod>2016-06-25T12:20:27.000Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://spark8.tech/2015/10/24/flumerizhi/</loc>
+    
+    <lastmod>2016-06-25T12:12:45.000Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://spark8.tech/2015/10/20/transform/</loc>
+    
+    <lastmod>2016-06-25T12:00:27.000Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://spark8.tech/2015/10/18/hivejilian/</loc>
+    
+    <lastmod>2016-06-25T11:57:31.000Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://spark8.tech/2015/10/19/udf/</loc>
+    
+    <lastmod>2016-06-25T11:56:42.000Z</lastmod>
+    
+  </url>
+  
+  <url>
     <loc>http://spark8.tech/2015/10/13/groupingCompa/</loc>
     
     <lastmod>2016-06-25T11:32:09.000Z</lastmod>
