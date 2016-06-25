@@ -1,0 +1,275 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta http-equiv="content-type" content="text/html; charset=utf-8"><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport"><meta content="yes" name="apple-mobile-web-app-capable"><meta content="black-translucent" name="apple-mobile-web-app-status-bar-style"><meta content="HMmFpsFIIdXroD_bySStaKsE_InwsQEEVxA2Cne-P4o" name="google-site-verification"><meta content="telephone=no" name="format-detection"><meta name="description" content="spark8,Spark8,Spark2.0,spark2.0"><title>Hadoop2.x——自定义输出格式重写outputformat | Spark8</title><link rel="stylesheet" type="text/css" href="/css/style.css?v=0.0.1"><link rel="stylesheet" type="text/css" href="//cdn.bootcss.com/normalize/4.1.1/normalize.min.css"><link rel="stylesheet" type="text/css" href="//cdn.bootcss.com/pure/0.6.0/pure-min.css"><link rel="stylesheet" type="text/css" href="//cdn.bootcss.com/pure/0.6.0/grids-responsive-min.css"><link rel="stylesheet" href="//cdn.bootcss.com/font-awesome/4.6.2/css/font-awesome.min.css"><script type="text/javascript" src="//cdn.bootcss.com/jquery/2.2.3/jquery.min.js"></script><link rel="Shortcut Icon" type="image/x-icon" href="/favicon.ico"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="apple-touch-icon-precomposed" href="/apple-touch-icon.png"></head><body><div class="body_container"><div id="header"><div class="site-name"><h1 class="hidden">Hadoop2.x——自定义输出格式重写outputformat</h1><a id="logo" href="/.">Spark8</a><p class="description">Do something you want,Be someone you like!</p></div><div id="nav-menu"><a href="/." class="current"><i class="fa fa-home"> 首页</i></a><a href="/archives/"><i class="fa fa-archive"> 归档</i></a><a href="/about/"><i class="fa fa-user"> 关于</i></a></div></div><div id="layout" class="pure-g"><div class="pure-u-1 pure-u-md-3-4"><div class="content_container"><div class="post"><h1 class="post-title">Hadoop2.x——自定义输出格式重写outputformat</h1><div class="post-meta">Oct 9, 2015<span> | </span><span class="category"><a href="/categories/hadoop/">hadoop</a></span><script src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js" async></script><span id="busuanzi_container_page_pv"> | <span id="busuanzi_value_page_pv"></span><span> Hits</span></span></div><a data-disqus-identifier="2015/10/09/zidingyiot/" href="/2015/10/09/zidingyiot/#disqus_thread" class="disqus-comment-count"></a><div class="post-content"><a id="more"></a>
+<h2 id="需求描述"><a href="#需求描述" class="headerlink" title="需求描述"></a>需求描述</h2><p>现有一些原始日志需要做增强解析处理，流程<br>1、从原始日志文件中读取数据<br>2、根据日志中的一个URL字段到外部知识库中获取信息增强到原始日志<br>3、如果成功增强，则输出到增强结果目录；如果增强失败，则抽取原始数据中URL字段输出到待爬清单目录</p>
+<h2 id="实现思路"><a href="#实现思路" class="headerlink" title="实现思路"></a>实现思路</h2><p>程序的关键点是要在一个mapreduce程序中根据数据的不同输出两类结果到不同目录，这类灵活的输出需求可以通过自定义outputformat来实现<br>实现要点：<br>1、在mapreduce中访问外部资源<br>2、自定义outputformat，改写其中的recordwriter，改写具体输出数据的方法write()</p>
+<h2 id="代码实现"><a href="#代码实现" class="headerlink" title="代码实现"></a>代码实现</h2><p>代码实现如下：<br>数据库获取数据的工具<br>        public class DBLoader {<br>            public static void dbLoader(HashMap<string, string=""> ruleMap) throws Exception {</string,></p>
+<pre><code>        Connection conn = null;
+        Statement st = null;
+        ResultSet res = null;
+
+        try {
+            Class.forName(&quot;com.mysql.jdbc.Driver&quot;);
+            conn = DriverManager.getConnection(&quot;jdbc:mysql://hdp-node-01:3306/urldb&quot;, &quot;root&quot;, &quot;root&quot;);
+            st = conn.createStatement();
+            res = st.executeQuery(&quot;select url,content from url_rule&quot;);
+            while (res.next()) {
+                ruleMap.put(res.getString(1), res.getString(2));
+            }
+        } finally 
+            try{
+                if(res!=null){
+                    res.close();
+                if(st!=null)
+                    st.close();
+                if(conn!=null)
+                    conn.close();
+            }catch(Exception e){
+                e.printStackTrace();    }
+        }
+    }
+}
+</code></pre><p>FlowBean<br>        public class FlowBean implements WritableComparable<flowbean> {</flowbean></p>
+<pre><code>    private String url;
+    private long upflow;
+
+    public FlowBean() {
+    }
+
+    public void set(String url, long upflow) {
+
+        this.url = url;
+        this.upflow = upflow;
+
+    }
+
+    public String getUrl() {
+        return url;
+    }
+
+    public void setUrl(String url) {
+        this.url = url;
+    }
+
+    public long getUpflow() {
+        return upflow;
+    }
+
+    public void setUpflow(long upflow) {
+        this.upflow = upflow;
+    }
+
+    @Override
+    public void readFields(DataInput in) throws IOException {
+
+        url = in.readUTF();
+        upflow = in.readLong();
+
+    }
+
+    @Override
+    public void write(DataOutput out) throws IOException 
+        out.writeUTF(url);
+        out.writeLong(upflow);
+    @Override
+    public int compareTo(FlowBean o) {
+        return this.upflow &gt; o.getUpflow() ? -1 : 1;
+    }    
+    @Override
+    public String toString() 
+
+        return  this.url + &quot;\t&quot; + this.upflow;
+
+    public static void main(String[] args) 
+        String ss = &quot;1374609503.88    1374609503.92    1374609503.92    1374609504.08    110    5    8613674936776    460003460238162    3595900488375164    2    460    0    14306            20193    10.184.41.121    123.125.114.195    45926    80    6    cmnet    1    221.177.156.14    221.177.217.145    221.177.156.14    221.177.217.155    mobads-logs.baidu.com    http://mobads-logs.baidu.com/dc?type=20&amp;st=pv&amp;rnd=0.9601120455190539        Mozilla/5.0 (Linux; U; Android 2.3.4; zh-CN; ST18i Build/4.0.2.A.0.62) AppleWebKit/534.31 (KHTML, like Gecko) UCBrowser/9.1.1.309 U3/0.8.0 Mobile Safari/534.31    GET    200    1317    291    7    2    0    0    7    2    0    0    0    0    http://mobads-logs.baidu.com/dc?type=20&amp;st=pv&amp;rnd=0.9601120455190539    5903902610650624011    5903902862210048011    5966330&quot;;
+        String[] fields = StringUtils.split(ss,&quot;\t&quot;);
+        System.out.println(fields[26]);
+        System.out.println(fields[30]);    
+}
+</code></pre><p>开发mapreduce处理流程<br>        /**</p>
+<pre><code> * 日志增强：从原始日志中获取url，然后去知识库查找内容信息标签，追加到原始日志中
+ * 如果查不到的url，就输出到带爬清单中
+ * 
+ * @author
+ * 
+ */
+public class LogEnhancer extends Configured implements Tool{
+
+    static class LogEnhancerMapper extends Mapper&lt;LongWritable, Text, Text, NullWritable&gt; {
+
+        HashMap&lt;String, String&gt; knowledgeMap = new HashMap&lt;String, String&gt;();
+
+        /**
+         * maptask
+         */
+        @Override
+        protected void setup(Context context) throws IOException, InterruptedException {
+
+            try {
+                DBLoader.dbLoader(knowledgeMap);
+            } catch (Exception e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
+
+        }
+
+        @Override
+        protected void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
+
+            String line = value.toString();
+
+            String[] fields = StringUtils.split(line, &quot;\t&quot;);
+
+            try {
+                String url = fields[26];
+
+                // 从规则库中匹配标签信息
+                String content = knowledgeMap.get(url);
+
+                // 判断规则库匹配结果
+                String result = &quot;&quot;;
+                if (null == content) {
+                    // 如果匹配失败，则将这条url到带爬清单文件中
+                    result = url + &quot;\t&quot; + &quot;tocrawl\n&quot;;
+                } else {
+                    // 如果匹配成功，则将这条“原始日志+内容标签”输出到增强日志文件中
+                    result = line + &quot;\t&quot; + content + &quot;\n&quot;;
+                }
+
+                context.write(new Text(result), NullWritable.get());
+            } catch (Exception e) {
+
+            }
+        }
+
+    }
+
+    public static void main(String[] args) throws Exception {
+
+        Configuration conf = new Configuration();
+
+        Job job = Job.getInstance(conf);
+
+        job.setJarByClass(LogEnhancer.class);
+
+        job.setMapperClass(LogEnhancerMapper.class);
+
+        job.setOutputKeyClass(Text.class);
+        job.setOutputValueClass(NullWritable.class);
+
+        // 要控制不同的内容写往不同的目标路径，可以采用自定义outputformat的方法
+        job.setOutputFormatClass(LogEnhancerOutputFormat.class);
+
+        FileInputFormat.setInputPaths(job, new Path(args[0]));
+
+        //尽管我们用的是自定义outputformat，但是它是继承制fileoutputformat
+        //在fileoutputformat中，必须输出一个success文件，所以在此还需要设置输出path
+        FileOutputFormat.setOutputPath(job, new Path(args[1]));
+
+        //不需要reducer
+        job.setNumReduceTasks(0);
+
+
+        job.waitForCompletion(true);
+        System.exit(0);
+
+    }
+    @Override
+    public int run(String[] args) throws Exception {
+        // TODO Auto-generated method stub
+        return 0;
+    }
+}
+</code></pre><p>自定义outputformat<br>        public class LogEnhancerOutputFormat extends FileOutputFormat<text, nullwritable="">{</text,></p>
+<pre><code>    @Override
+    public RecordWriter&lt;Text, NullWritable&gt; getRecordWriter(TaskAttemptContext context) throws IOException, InterruptedException {
+
+
+        FileSystem fs = FileSystem.get(context.getConfiguration());
+        Path enhancePath = new Path(&quot;hdfs://hadoop01:9000/wordcount/enhancelog/enhanced.log&quot;);
+        Path toCrawlPath = new Path(&quot;hdfs://hadoop01:9000/wordcount/tocrawl/tocrawl.log&quot;);
+
+        FSDataOutputStream enhanceOut = fs.create(enhancePath);
+        FSDataOutputStream toCrawlOut = fs.create(toCrawlPath);
+
+
+        return new MyRecordWriter(enhanceOut,toCrawlOut);
+    }
+
+
+
+    static class MyRecordWriter extends RecordWriter&lt;Text, NullWritable&gt;{
+
+        FSDataOutputStream enhanceOut = null;
+        FSDataOutputStream toCrawlOut = null;
+
+        public MyRecordWriter(FSDataOutputStream enhanceOut, FSDataOutputStream toCrawlOut) {
+            this.enhanceOut = enhanceOut;
+            this.toCrawlOut = toCrawlOut;
+        }
+
+        @Override
+        public void write(Text key, NullWritable value) throws IOException, InterruptedException {
+
+            //判断数据的一些标记，根据不同标记写往不同文件
+            //增日志写往enhanceOut，待爬清单写往toCrawlOut
+            if(key.toString().contains(&quot;tocrawl&quot;)){
+                toCrawlOut.write(key.toString().getBytes());
+            }else{
+                enhanceOut.write(key.toString().getBytes());
+            }
+
+        }
+
+        @Override
+        public void close(TaskAttemptContext context) throws IOException, InterruptedException {
+
+            if(toCrawlOut!=null){
+                toCrawlOut.close();
+            }
+            if(enhanceOut!=null){
+                enhanceOut.close();
+            }
+
+        }
+
+
+    }
+
+
+}
+</code></pre></div><script type="text/javascript" src="/js/share.js?v=0.0.1" async></script><a data-url="http://spark8.tech/2015/10/09/zidingyiot/" data-id="cipv2ctic001j10w2g0nog46f" class="article-share-link">分享到</a><div class="tags"><a href="/tags/hadoop/">hadoop</a><a href="/tags/outputformat/">outputformat</a></div><div class="post-nav"><a href="/2015/10/10/daopaisuoyin/" class="pre">Hadoop2.x——倒排索引</a><a href="/2015/10/08/fbshchadoop/" class="next">Hadoop2.x——分布式缓存(解决数据倾斜问题)</a></div><div id="disqus_thread"><script>var disqus_shortname = 'sparkliwei';
+var disqus_identifier = '2015/10/09/zidingyiot/';
+var disqus_title = 'Hadoop2.x——自定义输出格式重写outputformat';
+var disqus_url = 'http://spark8.tech/2015/10/09/zidingyiot/';
+(function() {
+  var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+  dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+  (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+})();</script><script id="dsq-count-scr" src="//sparkliwei.disqus.com/count.js" async></script></div></div></div></div><div class="pure-u-1-4"><div id="sidebar"><div class="widget"><div class="search-form"><input id="local-search-input" placeholder="Search" type="text" name="q" results="0"/><div id="local-search-result"></div></div></div><div class="widget"><div class="widget-title"><i class="fa fa-folder-o"> 分类</i></div><ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/Linux/">Linux</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/RPC/">RPC</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/hadoop/">hadoop</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/redis/">redis</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/storm/">storm</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/zookeeper/">zookeeper</a></li></ul></div><div class="widget"><div class="widget-title"><i class="fa fa-star-o"> 标签</i></div><div class="tagcloud"><a href="/tags/kafka/" style="font-size: 15px;">kafka</a> <a href="/tags/Linux/" style="font-size: 15px;">Linux</a> <a href="/tags/hadoop/" style="font-size: 15px;">hadoop</a> <a href="/tags/MR/" style="font-size: 15px;">MR</a> <a href="/tags/HA/" style="font-size: 15px;">HA</a> <a href="/tags/HDFS/" style="font-size: 15px;">HDFS</a> <a href="/tags/map-reduce/" style="font-size: 15px;">map reduce</a> <a href="/tags/MapReduce/" style="font-size: 15px;">MapReduce</a> <a href="/tags/Redis/" style="font-size: 15px;">Redis</a> <a href="/tags/RPC/" style="font-size: 15px;">RPC</a> <a href="/tags/storm/" style="font-size: 15px;">storm</a> <a href="/tags/flume/" style="font-size: 15px;">flume</a> <a href="/tags/mysql/" style="font-size: 15px;">mysql</a> <a href="/tags/redis/" style="font-size: 15px;">redis</a> <a href="/tags/Shell脚本/" style="font-size: 15px;">Shell脚本</a> <a href="/tags/outputformat/" style="font-size: 15px;">outputformat</a> <a href="/tags/zookeeper/" style="font-size: 15px;">zookeeper</a> <a href="/tags/推荐系统/" style="font-size: 15px;">推荐系统</a></div></div><div class="widget"><div class="widget-title"><i class="fa fa-file-o"> 最新文章</i></div><ul class="post-list"><li class="post-list-item"><a class="post-list-link" href="/2016/05/18/rizhijiankong2/">日志监控告警系统（二）</a></li><li class="post-list-item"><a class="post-list-link" href="/2016/05/17/rizhijiankong1/">日志监控告警系统（一）</a></li><li class="post-list-item"><a class="post-list-link" href="/2016/05/17/shelltohdfs/">Shell编程——使用HDFS Shell上传文件</a></li><li class="post-list-item"><a class="post-list-link" href="/2016/05/16/Linuxline/">Linux——网络连接三种方式</a></li><li class="post-list-item"><a class="post-list-link" href="/2016/05/15/shellautodeploy/">Shell编程——自动化软件部署脚本</a></li><li class="post-list-item"><a class="post-list-link" href="/2016/05/12/easyrpc2/">轻量级RPC框架（二）</a></li><li class="post-list-item"><a class="post-list-link" href="/2016/05/12/easyrpc/">轻量级RPC框架（一）</a></li><li class="post-list-item"><a class="post-list-link" href="/2016/04/12/tjxt/">推荐系统——User CF vs. Item CF</a></li><li class="post-list-item"><a class="post-list-link" href="/2016/03/14/redis_sortedSet/">Redis应用-LOL盒子英雄数据排行榜</a></li><li class="post-list-item"><a class="post-list-link" href="/2016/03/12/redisgouwuche/">Redis应用-购物车推荐</a></li></ul></div><div class="widget"><div class="widget-title"><i class="fa fa-comment-o"> 最近评论</i></div><script type="text/javascript" src="//sparkliwei.disqus.com/recent_comments_widget.js?num_items=5&amp;hide_avatars=1&amp;avatar_size=32&amp;excerpt_length=20&amp;hide_mods=1"></script></div><div class="widget"><div class="widget-title"><i class="fa fa-external-link"> 友情链接</i></div><ul></ul><a href="http://spark8.tech/" title="spark8" target="_blank">spark8</a><ul></ul><a href="https://github.com/sparkLiwei" title="github" target="_blank">github</a></div></div></div><div class="pure-u-1 pure-u-md-3-4"><div id="footer">© <a href="/." rel="nofollow">Spark8.</a> Powered by<a rel="nofollow" target="_blank" href="https://hexo.io"> Hexo.</a><a rel="nofollow" target="_blank" href="https://github.com/tufu9441/maupassant-hexo"> Theme</a> by<a rel="nofollow" target="_blank" href="https://github.com/pagecho"> Cho.</a></div></div></div><a id="rocket" href="#top" class="show"></a><script type="text/javascript" src="/js/totop.js?v=0.0.1" async></script><script type="text/javascript" src="//cdn.bootcss.com/fancybox/2.1.5/jquery.fancybox.pack.js" async></script><script type="text/javascript" src="/js/fancybox.js?v=0.0.1" async></script><link rel="stylesheet" type="text/css" href="/css/jquery.fancybox.css?v=0.0.1"><script type="text/javascript" src="/js/search.js?v=0.0.1"></script><script>var search_path = 'search.xml';
+if (search_path.length == 0) {
+   search_path = 'search.xml';
+}
+var path = '/' + search_path;
+searchFunc(path, 'local-search-input', 'local-search-result');
+</script><script>(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+ga('create','UA-79665129-1','auto');ga('send','pageview');
+</script><script>var _hmt = _hmt || [];
+(function() {
+  var hm = document.createElement("script");
+  hm.src = "//hm.baidu.com/hm.js?561e14522c8f418b3f35a30cba92c642";
+  var s = document.getElementsByTagName("script")[0];
+  s.parentNode.insertBefore(hm, s);
+  var bp = document.createElement('script');
+  var curProtocol = window.location.protocol.split(':')[0];
+  if (curProtocol === 'https') {
+     bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';
+  }
+  else {
+     bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+  }
+  s.parentNode.insertBefore(bp, s);
+  })();
+</script><script type="text/javascript" src="/js/codeblock-resizer.js?v=0.0.1"></script><script type="text/javascript" src="/js/smartresize.js?v=0.0.1"></script></div></body></html>

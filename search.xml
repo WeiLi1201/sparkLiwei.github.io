@@ -714,6 +714,104 @@ public Map&lt;String, Double&gt; recommend(String userName) {
     </entry>
     
     <entry>
+      <title><![CDATA[Zookeeper-分布式共享锁]]></title>
+      <url>http://spark8.tech/2016/03/11/zkfbss/</url>
+      <content type="html"><![CDATA[<a id="more"></a>
+<h2 id="一、需求描述"><a href="#一、需求描述" class="headerlink" title="一、需求描述"></a>一、需求描述</h2><p>  在我们自己的分布式业务系统中，可能会存在某种资源，需要被整个系统的各台服务器共享访问，但是只允许一台服务器同时访问</p>
+<h2 id="二、设计思路"><a href="#二、设计思路" class="headerlink" title="二、设计思路"></a>二、设计思路</h2><ol>
+<li>连接zookeeper，process监听子节点变化事件，接收事件按规则写业务逻辑，并重新注册锁</li>
+<li>向zookeeper注册一把锁</li>
+<li>从zk的锁父目录下，获取所有子节点，并且注册对父节点的监听</li>
+<li>如果争抢资源的程序就只有自己，则可以直接去访问共享资源</li>
+<li>访问资源后删除锁<h2 id="三、代码开发"><a href="#三、代码开发" class="headerlink" title="三、代码开发"></a>三、代码开发</h2>   public class DistributedClientLock {</li>
+</ol>
+<pre><code>       // 会话超时
+       private static final int SESSION_TIMEOUT = 2000;
+       // zookeeper集群地址
+       private String hosts = &quot;mini1:2181,mini2:2181,mini3:2181&quot;;
+       private String groupNode = &quot;locks&quot;;
+       private String subNode = &quot;sub&quot;;
+       private boolean haveLock = false;
+
+       private ZooKeeper zk;
+       // 记录自己创建的子节点路径
+       private volatile String thisPath;
+
+       /**
+        * 连接zookeeper
+        */
+       public void connectZookeeper() throws Exception {
+           zk = new ZooKeeper(hosts, SESSION_TIMEOUT, new Watcher() {
+               public void process(WatchedEvent event) {
+                   try {
+
+                       // 判断事件类型，此处只处理子节点变化事件
+                       if (event.getType() == EventType.NodeChildrenChanged &amp;&amp; event.getPath().equals(&quot;/&quot; + groupNode)) {
+                           //获取子节点，并对父节点进行监听
+                           List&lt;String&gt; childrenNodes = zk.getChildren(&quot;/&quot; + groupNode, true);
+                           String thisNode = thisPath.substring((&quot;/&quot; + groupNode + &quot;/&quot;).length());
+                           // 去比较是否自己是最小id
+                           Collections.sort(childrenNodes);
+                           if (childrenNodes.indexOf(thisNode) == 0) {
+                               //访问共享资源处理业务，并且在处理完成之后删除锁
+                               doSomething();
+
+                               //重新注册一把新的锁
+                               thisPath = zk.create(&quot;/&quot; + groupNode + &quot;/&quot; + subNode, null, Ids.OPEN_ACL_UNSAFE,
+                                       CreateMode.EPHEMERAL_SEQUENTIAL);
+                           }
+                       }
+                   } catch (Exception e) {
+                       e.printStackTrace();
+                   }
+               }
+           });
+
+           // 1、程序一进来就先注册一把锁到zk上
+           thisPath = zk.create(&quot;/&quot; + groupNode + &quot;/&quot; + subNode, null, Ids.OPEN_ACL_UNSAFE,
+                   CreateMode.EPHEMERAL_SEQUENTIAL);
+
+           // wait一小会，便于观察
+           Thread.sleep(new Random().nextInt(1000));
+
+           // 从zk的锁父目录下，获取所有子节点，并且注册对父节点的监听
+           List&lt;String&gt; childrenNodes = zk.getChildren(&quot;/&quot; + groupNode, true);
+
+           // 如果争抢资源的程序就只有自己，则可以直接去访问共享资源 
+           if (childrenNodes.size() == 1) {
+               doSomething();
+               thisPath = zk.create(&quot;/&quot; + groupNode + &quot;/&quot; + subNode, null, Ids.OPEN_ACL_UNSAFE,
+                       CreateMode.EPHEMERAL_SEQUENTIAL);
+           }
+       }
+
+       /**
+        * 处理业务逻辑，并且在最后释放锁
+        */
+       private void doSomething() throws Exception {
+           try {
+               System.out.println(&quot;gain lock: &quot; + thisPath);
+               Thread.sleep(2000);
+               // do something
+           } finally {
+               System.out.println(&quot;finished: &quot; + thisPath);
+       //删除之前的锁节点
+               zk.delete(this.thisPath, -1);
+           }
+       }
+
+       public static void main(String[] args) throws Exception {
+           DistributedClientLock dl = new DistributedClientLock();
+           dl.connectZookeeper();
+           Thread.sleep(Long.MAX_VALUE);
+       }
+
+
+}
+</code></pre>]]></content>
+    </entry>
+    
+    <entry>
       <title><![CDATA[Zookeeper-服务器上下线动态感知]]></title>
       <url>http://spark8.tech/2016/03/11/zkfbs/</url>
       <content type="html"><![CDATA[<a id="more"></a>
@@ -853,97 +951,618 @@ public Map&lt;String, Double&gt; recommend(String userName) {
     </entry>
     
     <entry>
-      <title><![CDATA[Zookeeper-分布式共享锁]]></title>
-      <url>http://spark8.tech/2016/03/11/zkfbss/</url>
+      <title><![CDATA[Zookeeper-原理补充]]></title>
+      <url>http://spark8.tech/2016/03/11/zkyuanli/</url>
       <content type="html"><![CDATA[<a id="more"></a>
-<h2 id="一、需求描述"><a href="#一、需求描述" class="headerlink" title="一、需求描述"></a>一、需求描述</h2><p>  在我们自己的分布式业务系统中，可能会存在某种资源，需要被整个系统的各台服务器共享访问，但是只允许一台服务器同时访问</p>
-<h2 id="二、设计思路"><a href="#二、设计思路" class="headerlink" title="二、设计思路"></a>二、设计思路</h2><ol>
-<li>连接zookeeper，process监听子节点变化事件，接收事件按规则写业务逻辑，并重新注册锁</li>
-<li>向zookeeper注册一把锁</li>
-<li>从zk的锁父目录下，获取所有子节点，并且注册对父节点的监听</li>
-<li>如果争抢资源的程序就只有自己，则可以直接去访问共享资源</li>
-<li>访问资源后删除锁<h2 id="三、代码开发"><a href="#三、代码开发" class="headerlink" title="三、代码开发"></a>三、代码开发</h2>   public class DistributedClientLock {</li>
-</ol>
-<pre><code>       // 会话超时
-       private static final int SESSION_TIMEOUT = 2000;
-       // zookeeper集群地址
-       private String hosts = &quot;mini1:2181,mini2:2181,mini3:2181&quot;;
-       private String groupNode = &quot;locks&quot;;
-       private String subNode = &quot;sub&quot;;
-       private boolean haveLock = false;
+<h2 id="Zookepper的选举机制（保证数据一致性的核心算法paxos）"><a href="#Zookepper的选举机制（保证数据一致性的核心算法paxos）" class="headerlink" title="Zookepper的选举机制（保证数据一致性的核心算法paxos）"></a>Zookepper的选举机制（保证数据一致性的核心算法paxos）</h2><p>以一个简单的例子来说明整个选举的过程.<br>假设有五台服务器组成的zookeeper集群,它们的id从1-5,同时它们都是最新启动的,也就是没有历史数据,在存放数据量这一点上,都是一样的.假设这些服务器依序启动,来看看会发生什么.<br>1) 服务器1启动,此时只有它一台服务器启动了,它发出去的报没有任何响应,所以它的选举状态一直是LOOKING状态<br>2) 服务器2启动,它与最开始启动的服务器1进行通信,互相交换自己的选举结果,由于两者都没有历史数据,所以id值较大的服务器2胜出,但是由于没有达到超过半数以上的服务器都同意选举它(这个例子中的半数以上是3),所以服务器1,2还是继续保持LOOKING状态.<br>3) 服务器3启动,根据前面的理论分析,服务器3成为服务器1,2,3中的老大,而与上面不同的是,此时有三台服务器选举了它,所以它成为了这次选举的leader.<br>4) 服务器4启动,根据前面的分析,理论上服务器4应该是服务器1,2,3,4中最大的,但是由于前面已经有半数以上的服务器选举了服务器3,所以它只能接收当小弟的命了.<br>5) 服务器5启动,同4一样,当小弟.</p>
+<h2 id="非全新集群的选举机制-数据恢复"><a href="#非全新集群的选举机制-数据恢复" class="headerlink" title="非全新集群的选举机制(数据恢复)"></a>非全新集群的选举机制(数据恢复)</h2><p>那么，初始化的时候，是按照上述的说明进行选举的，但是当zookeeper运行了一段时间之后，有机器down掉，重新选举时，选举过程就相对复杂了。<br>需要加入数据version、leader id和逻辑时钟。<br>数据version：数据新的version就大，数据每次更新都会更新version。<br>Leader id：就是我们配置的myid中的值，每个机器一个。<br>逻辑时钟：这个值从0开始递增,每次选举对应一个值,也就是说:  如果在同一次选举中,那么这个值应该是一致的 ;  逻辑时钟值越大,说明这一次选举leader的进程更新.<br>选举的标准就变成：<br>1、逻辑时钟小的选举结果被忽略，重新投票<br>2、统一逻辑时钟后，数据id大的胜出<br>3、数据id相同的情况下，leader id大的胜出<br>根据这个规则选出leader。</p>
+]]></content>
+    </entry>
+    
+    <entry>
+      <title><![CDATA[Hadoop2.x——实现HA]]></title>
+      <url>http://spark8.tech/2015/11/14/hadoopha/</url>
+      <content type="html"><![CDATA[<a id="more"></a>
+<h2 id="HA的运作机制"><a href="#HA的运作机制" class="headerlink" title="HA的运作机制"></a>HA的运作机制</h2><p>(1)  hadoop-HA集群运作机制介绍<br>所谓HA，即高可用（7*24小时不中断服务）<br>实现高可用最关键的是消除单点故障<br>hadoop-ha严格来说应该分成各个组件的HA机制——HDFS的HA、YARN的HA<br>(2) HDFS的HA机制详解<br>通过双namenode消除单点故障<br>双namenode协调工作的要点：<br>A、元数据管理方式需要改变：<br>内存中各自保存一份元数据<br>Edits日志只能有一份，只有Active状态的namenode节点可以做写操作<br>两个namenode都可以读取edits<br>共享的edits放在一个共享存储中管理（qjournal和NFS两个主流实现）<br>B、需要一个状态管理功能模块<br>实现了一个zkfailover，常驻在每一个namenode所在的节点<br>每一个zkfailover负责监控自己所在namenode节点，利用zk进行状态标识<br>当需要进行状态切换时，由zkfailover来负责切换<br>切换时需要防止brain split现象的发生</p>
+<h2 id="HDFS-HA图解"><a href="#HDFS-HA图解" class="headerlink" title="HDFS-HA图解"></a>HDFS-HA图解</h2><p><img src="/images/hdfsha.png" alt="" title="hdfsha"></p>
+<h2 id="HA集群的安装部署"><a href="#HA集群的安装部署" class="headerlink" title="HA集群的安装部署"></a>HA集群的安装部署</h2><h3 id="集群节点规划"><a href="#集群节点规划" class="headerlink" title="集群节点规划"></a>集群节点规划</h3><p>10节点<br><img src="/images/10jiedian" alt="" title="10jiedian"><br>8节点<br><img src="/images/8jiedian.png" alt="" title="8jiedian"></p>
+<h3 id="环境准备"><a href="#环境准备" class="headerlink" title="环境准备"></a>环境准备</h3><p>环境准备<br>a/linux系统准备<br>ip地址配置<br>hostname配置<br>hosts映射配置<br>防火墙关闭<br>init启动级别修改3<br>sudoers加入hadoop用户<br>ssh免密登陆配置</p>
+<p>b/java环境的配置<br>上传jdk，解压，修改/etc/profile</p>
+<p> c/zookeeper集群的部署</p>
+<h3 id="配置文件"><a href="#配置文件" class="headerlink" title="配置文件"></a>配置文件</h3><p>core-site.xml<br>        <configuration><br>        <!-- 指定hdfs的nameservice为ns1 --><br>        <property><br>        <name>fs.defaultFS</name><br>        <value>hdfs://ns1/</value><br>        </property><br>        <!-- 指定hadoop临时目录 --><br>        <property><br>        <name>hadoop.tmp.dir</name><br>        <value>/home/hadoop/app/hadoop-2.4.1/tmp</value><br>        </property></configuration></p>
+<pre><code>&lt;!-- 指定zookeeper地址 --&gt;
+&lt;property&gt;
+&lt;name&gt;ha.zookeeper.quorum&lt;/name&gt;
+&lt;value&gt;weekend05:2181,weekend06:2181,weekend07:2181&lt;/value&gt;
+&lt;/property&gt;
+&lt;/configuration&gt;
+</code></pre><p>hdfs-site.xml<br>        <configuration><br>        <!--指定hdfs的nameservice为ns1，需要和core-site.xml中的保持一致 --><br>        <property><br>        <name>dfs.nameservices</name><br>        <value>ns1</value><br>        </property><br>        <!-- ns1下面有两个NameNode，分别是nn1，nn2 --><br>        <property><br>        <name>dfs.ha.namenodes.ns1</name><br>        <value>nn1,nn2</value><br>        </property><br>        <!-- nn1的RPC通信地址 --><br>        <property><br>        <name>dfs.namenode.rpc-address.ns1.nn1</name><br>        <value>weekend01:9000</value><br>        </property><br>        <!-- nn1的http通信地址 --><br>        <property><br>        <name>dfs.namenode.http-address.ns1.nn1</name><br>        <value>weekend01:50070</value><br>        </property><br>        <!-- nn2的RPC通信地址 --><br>        <property><br>        <name>dfs.namenode.rpc-address.ns1.nn2</name><br>        <value>weekend02:9000</value><br>        </property><br>        <!-- nn2的http通信地址 --><br>        <property><br>        <name>dfs.namenode.http-address.ns1.nn2</name><br>        <value>weekend02:50070</value><br>        </property><br>        <!-- 指定NameNode的edits元数据在JournalNode上的存放位置 --><br>        <property><br>        <name>dfs.namenode.shared.edits.dir</name><br>        <value>qjournal://weekend05:8485;weekend06:8485;weekend07:8485/ns1</value><br>        </property><br>        <!-- 指定JournalNode在本地磁盘存放数据的位置 --><br>        <property><br>        <name>dfs.journalnode.edits.dir</name><br>        <value>/home/hadoop/app/hadoop-2.4.1/journaldata</value><br>        </property><br>        <!-- 开启NameNode失败自动切换 --><br>        <property><br>        <name>dfs.ha.automatic-failover.enabled</name><br>        <value>true</value><br>        </property><br>        <!-- 配置失败自动切换实现方式 --><br>        <property><br>        <name>dfs.client.failover.proxy.provider.ns1</name><br>        <value>org.apache.hadoop.hdfs.server.namenode.ha.ConfiguredFailoverProxyProvider</value><br>        </property><br>        <!-- 配置隔离机制方法，多个机制用换行分割，即每个机制暂用一行--><br>        <property><br>        <name>dfs.ha.fencing.methods</name><br>        <value><br>        sshfence<br>        shell(/bin/true)<br>        </value><br>        </property><br>        <!-- 使用sshfence隔离机制时需要ssh免登陆 --><br>        <property><br>        <name>dfs.ha.fencing.ssh.private-key-files</name><br>        <value>/home/hadoop/.ssh/id_rsa</value><br>        </property><br>        <!-- 配置sshfence隔离机制超时时间 --><br>        <property><br>        <name>dfs.ha.fencing.ssh.connect-timeout</name><br>        <value>30000</value><br>        </property><br>        /configuration&gt;</configuration></p>
+<h3 id="集群运维测试"><a href="#集群运维测试" class="headerlink" title="集群运维测试"></a>集群运维测试</h3><p>HA集群中两个namenode状态的管理命令</p>
+<blockquote>
+<p><a href="#">root@mini2 hadoop-2.6.4</a># bin/hdfs haadmin<br>Usage: DFSHAAdmin <a href="#">-ns \<nameserviceid\></nameserviceid\></a><br>[-transitionToActive \<serviceid\> <a href="#">–forceactive</a>]<br><a href="#">-transitionToStandby \<serviceid\></serviceid\></a><br>[-failover <a href="#">–forcefence</a> <a href="#">–forceactive</a> \<serviceid\> \<serviceid\>]<br><a href="#">-getServiceState \<serviceid\></serviceid\></a><br><a href="#">-checkHealth \<serviceid\></serviceid\></a><br><a href="#">-help \<command\></command\></a><br>示例： 切换nn2为active<br>bin/hdfs haadmin -transitionToActive nn2 –forcemanual</serviceid\></serviceid\></serviceid\></p>
+<h4 id="Datanode动态上下线"><a href="#Datanode动态上下线" class="headerlink" title="Datanode动态上下线"></a>Datanode动态上下线</h4><p>Datanode动态上下线很简单，步骤如下：<br>a)    准备一台服务器，设置好环境<br>b)    部署hadoop的安装包，并同步集群配置<br>c)    联网上线，新datanode会自动加入集群<br>d)    如果是一次增加大批datanode，还应该做集群负载重均衡</p>
+<h4 id="Namenode状态切换管理"><a href="#Namenode状态切换管理" class="headerlink" title="Namenode状态切换管理"></a>Namenode状态切换管理</h4><p>使用的命令上hdfs  haadmin<br>可用 hdfs  haadmin –help查看所有帮助信息<br><img src="/images/hahelp.png" alt="" title="hahelp"><br>可以看到，状态操作的命令示例：<br>查看namenode工作状态<br>    hdfs haadmin -getServiceState nn1<br>将standby状态namenode切换到active<br>    hdfs haadmin –transitionToActive nn1<br>将active状态namenode切换到standby<br>    hdfs haadmin –transitionToStandby nn2</p>
+<h4 id="数据块的balance"><a href="#数据块的balance" class="headerlink" title="数据块的balance"></a>数据块的balance</h4><p>启动balancer的命令：<br>start-balancer.sh -threshold 8<br>运行之后，会有Balancer进程出现：<br><img src="/images/balanceha.png" alt="" title="balanceha"><br>上述命令设置了Threshold为8%，那么执行balancer命令的时候，首先统计所有DataNode的磁盘利用率的均值，然后判断如果某一个DataNode的磁盘利用率超过这个均值Threshold，那么将会把这个DataNode的block转移到磁盘利用率低的DataNode，这对于新节点的加入来说十分有用。Threshold的值为1到100之间，不显示的进行参数设置的话，默认是10。</p>
+<h3 id="HA下hdfs-api变化"><a href="#HA下hdfs-api变化" class="headerlink" title="HA下hdfs-api变化"></a>HA下hdfs-api变化</h3><p>客户端需要nameservice的配置信息，其他不变<br>    /<em>*<br>    如果访问的是一个ha机制的集群<br>    则一定要把core-site.xml和hdfs-site.xml配置文件放在客户端程序的classpath下<br>    以让客户端能够理解hdfs://ns1/中  “ns1”是一个ha机制中的namenode对——nameservice<br>    以及知道ns1下具体的namenode通信地址<br>    @author
+     </em><br>     */<br>    public class UploadFile {<br>        public static void main(String[] args) throws Exception  {</p>
+</blockquote>
+<pre><code>    Configuration conf = new Configuration();
+    conf.set(&quot;fs.defaultFS&quot;, &quot;hdfs://ns1/&quot;);
 
-       private ZooKeeper zk;
-       // 记录自己创建的子节点路径
-       private volatile String thisPath;
+    FileSystem fs = FileSystem.get(new URI(&quot;hdfs://ns1/&quot;),conf,&quot;hadoop&quot;);
 
-       /**
-        * 连接zookeeper
-        */
-       public void connectZookeeper() throws Exception {
-           zk = new ZooKeeper(hosts, SESSION_TIMEOUT, new Watcher() {
-               public void process(WatchedEvent event) {
-                   try {
+    fs.copyFromLocalFile(new Path(&quot;g:/eclipse-jee-luna-SR1-linux-gtk.tar.gz&quot;), new Path(&quot;hdfs://ns1/&quot;));
+    fs.close(); 
+    }
+}
+</code></pre><p>Federation下 mr程序运行的staging提交目录问题<br>        <property><br>          <name>yarn.app.mapreduce.am.staging-dir</name><br>          <value>/bi/tmp/hadoop-yarn/staging</value><br>          <description>The staging dir used while submitting jobs.<br>          </description><br>        </property></p>
+]]></content>
+    </entry>
+    
+    <entry>
+      <title><![CDATA[Hadoop2.x——关于HDFS一些有意思的总结]]></title>
+      <url>http://spark8.tech/2015/11/11/hdfs/</url>
+      <content type="html"><![CDATA[<a id="more"></a>
+<h2 id="1-HDFS-文件存放"><a href="#1-HDFS-文件存放" class="headerlink" title="1. HDFS 文件存放"></a>1. HDFS 文件存放</h2><p>namenode   管理元数据（文件路径、副本数、文件的blockid，位置等信息）<br>datanode   用户的文件存放在datanode上，放在配置的目录dfs.datanode.data.dir下<br>Q：namenode的fsimage和edits.xml文件中有没有文件路径呢？<br>A：系统中数据块的位置不是由namenode维护的，里面只存blockid，name node启动时加载fsimage和edits的各项操作，namenode启动时首先运行于安全模式，即对于客户端是只读的。安全模式下namenode不会向datanode发出任何块复制或删除指令，这时是没有必要的，namenode只需等待更多的datanode发送块列表信息即可，当接收到足够多的块位置信息，满足“最小复本条件”后，namenode会在30秒后退出安全模式。<br> hdfs  dfsadmin -report命令可以查看hdfs集群的状态</p>
+<blockquote>
+<p>参见链接<a href="http://www.cnblogs.com/zhaosk/p/4375530.html" target="_blank" rel="external">http://www.cnblogs.com/zhaosk/p/4375530.html</a></p>
+<h2 id="2-HDFS文件副本"><a href="#2-HDFS文件副本" class="headerlink" title="2. HDFS文件副本"></a>2. HDFS文件副本</h2><p>Q：hdfs上的文件可以随时更改副本数吗？hdfs上的文件可以具有不同的副本数吗？<br>A:  可以的,我们一般是通过客户端连接hdfs（本质上FileSyste.get(conf)和hadoop fs都属于客户端），客户端设定replication conf  > local jar > hdfs default。</p>
+<h2 id="3-HDFS读写数据流程"><a href="#3-HDFS读写数据流程" class="headerlink" title="3. HDFS读写数据流程"></a>3. HDFS读写数据流程</h2><p>Q： hdfs适合做网盘么？<br>A：<br>不合适。HDFS在小文件场景下效率较低，并且文件读写速度太慢。下面是hdfs的读写数据流程？<br>hdfs读流程：<br>1、客户端向namenode请求读取文件（指定一个路径）<br>2、namenode查询元数据信息，看文件是否存在，看文件的block信息，并返回给客户端<br>3、客户端拿到block信息后，从第一个block开始，找到一台最近的datanode<br>4、客户端跟这台datanode发出读数据请求，建立文件传输通道，开始接收数据到客户端本地<br>5、接收完一个block后，再重复以上过程找到另一个datanode接收下一个block<br><img src="/images/hdfsdu.png" alt="" title="hdfsdu"><br>hdfs写流程：<br>1、客户端向namenode请求上传文件（指定一个路径）<br>2、namenode查询元数据信息，看路径是否存在<br>3、客户端就请求上传第一个block，指定副本数量、blocksize等参数<br>4、namenode收到请求后，找到若干台（副本数量）datanode信息返回给客户端<br>5、客户端跟第一个datanode发出请求建立数据传输通道，第一个datanode会继续向第2个dn发出通道建立请求，直到pipeline建立成功<br>6、pipeline成功后，客户端就开始向第1个datanode传输第一个block的数据，第1个就向第2个，第2个就向第3个传输数据<br>7、待第一个block上传成功后，继续向namenode请求上传第二个block块<br><img src="/images/hdfsxie" alt="" title="hdfsxie"></p>
+<h2 id="4-动态增加datanode"><a href="#4-动态增加datanode" class="headerlink" title="4. 动态增加datanode"></a>4. 动态增加datanode</h2><p>Q：如何动态增加一台datanode？<br>A： 超乎想象的easy，准备一台服务器，装好环境，解压一个hadoop安装包，然后从其他机器拷贝配置文件过来覆盖，网络连入集群即可。<br>Q： 怎么会如此简单？不是和配置的etc/hadoop/slave文件有关系么？<br>A： slave文件是为了让我们可以利用start-dfs.sh对集群进行批量启动而已，只要我们设置了namenode，datanode会与namenode通信定时汇报最新的块列表信息，namenode即将datanode加入集群中。<br>参考链接：<a href="http://www.cnblogs.com/imzye/p/5174169.html" target="_blank" rel="external">http://www.cnblogs.com/imzye/p/5174169.html</a></p>
+<h2 id="5-secondary-namenode是什么"><a href="#5-secondary-namenode是什么" class="headerlink" title="5. secondary namenode是什么"></a>5. secondary namenode是什么</h2><p>Q： secondary namenode是否是namenode的备份节点？<br>A： 不是的，SecondaryNameNode定期地合并fsimage和Edits日志文件，并保持Edits日志文件的大小在一个上限值内，由于它的内存需求与NameNode的一致，所以它通常运行在NameNode以外的一台机器上。Secondary NameNode以NameNode目录结构的相同方式存储合并后的命名空间镜像的副本，以备在namenode发生故障时使用。<br><img src="/images/hdfssecondary.png" alt="" title="hdfssecondary"></p>
+<h2 id="6-提高namenode元数据的安全性"><a href="#6-提高namenode元数据的安全性" class="headerlink" title="6. 提高namenode元数据的安全性"></a>6. 提高namenode元数据的安全性</h2><p>在未做HA的前提下…<br>Q:  如果namenode的元数据损坏，如何恢复？<br>A：<br>1、拷贝secondary namenode节点上工作目录中的namesecondary文件夹到namenode所在节点的工作目录中<br>2、将namesecondary重名为name<br>3、用hadoop-daemon.sh start namenode 启动namenode即可<br>但是由于namenode和secondarynamenode合并需要触发容量阈值和时间阈值，有可能中途宕机丢失数据，所以必须采取更多措施来保证元数据的安全性。<br>Q： 如何尽可能提高安全性呢？<br>A： 将namenode的元数据目录配置到多块磁盘上，或者配置到NFS文件系统中<br>先在linux系统中挂载磁盘<br>sda1  —> mount /dev/sda1  /metadata/disk1<br>sdb1  —> mount /dev/sdb1  /metadata/disk2<br>sdc1  —> mount /dev/sdc1  /metadata/disk3<br>然后配置hadoop<br>\<property\><br>\<name\>dfs.namenode.name.dir\</name\><br>\<value\>/metadata/disk1,/metadata/disk2,/metadata/disk3\</value\><br>\</property\><br>namenode就会将元数据完整地同时写入三块磁盘</p>
+</blockquote>
+]]></content>
+    </entry>
+    
+    <entry>
+      <title><![CDATA[Hadoop2.x——MR并行计算框架结构及核心运行机制]]></title>
+      <url>http://spark8.tech/2015/11/10/mapreduce/</url>
+      <content type="html"><![CDATA[<p>&lt;!—-more—-&gt;</p>
+<h2 id="一、MR结构"><a href="#一、MR结构" class="headerlink" title="一、MR结构"></a>一、MR结构</h2><p>一个完整的mapreduce程序在分布式运行时有三类实例进程：<br>1、MRAppMaster：负责整个程序的过程调度及状态协调<br>2、mapTask：负责map阶段的整个数据处理流程<br>3、ReduceTask：负责reduce阶段的整个数据处理流程</p>
+<h2 id="二、MR程序运行的两种模式"><a href="#二、MR程序运行的两种模式" class="headerlink" title="二、MR程序运行的两种模式"></a>二、MR程序运行的两种模式</h2><p>本地运行模式：<br>1、mapreduce程序是被提交给LocalJobRunner在本地以单进程的形式运行而处理的数据及输出结果可以在本地文件系统，也可以在hdfs上<br>2、怎样实现本地运行？写一个程序，不要带集群的配置文件（本质是你的mr程序的conf中是否有mapreduce.framework.name=local以及yarn.resourcemanager.hostname参数）<br>3、本地模式非常便于进行业务逻辑的debug，<br>集群运行模式：<br>1、将mapreduce程序提交给yarn集群resourcemanager，分发到很多的节点上并发执行<br>2、处理的数据和输出结果应该位于hdfs文件系统<br>3、提交集群的实现步骤：<br>A、将程序打成JAR包，然后在集群的任意一个节点上用hadoop命令启动<br>     $ hadoop jar wordcount.jar cn.itcast.bigdata.mrsimple.WordCountDriver inputpath outputpath<br>B、直接在linux的eclipse中运行main方法<br>（项目中要带参数：mapreduce.framework.name=yarn以及yarn的两个基本配置）<br>C、如果要在windows的eclipse中提交job给集群，则要修改YarnRunner类<br>参考链接<a href="http://www.flyne.org/article/1133" target="_blank" rel="external">http://www.flyne.org/article/1133</a></p>
+<h2 id="三、MR在YARN上的运行全流程"><a href="#三、MR在YARN上的运行全流程" class="headerlink" title="三、MR在YARN上的运行全流程"></a>三、MR在YARN上的运行全流程</h2><p>Yarn是一个资源调度平台，负责为运算程序提供服务器运算资源，相当于一个分布式的操作系统平台，而mapreduce等运算程序则相当于运行于操作系统之上的应用程序。<br>1、    yarn并不清楚用户提交的程序的运行机制<br>2、    yarn只提供运算资源的调度（用户程序向yarn申请资源，yarn就负责分配资源）<br>3、    yarn中的主管角色叫ResourceManager<br>4、    yarn中具体提供运算资源的角色叫NodeManager<br>这样一来，yarn其实就与运行的用户程序完全解耦，就意味着yarn上可以运行各种类型的分布式运算程序（mapreduce只是其中的一种），比如mapreduce、storm程序，spark程序，Tez，只要各种程序实现AppMaster接口即可。<br>下图为Yarn实现MR程序在集群上的资源调度过程：<br><img src="/images/mrYarn.png" alt="" title="mrYarn"></p>
+<h2 id="四、MR程序运行机制与shuffle"><a href="#四、MR程序运行机制与shuffle" class="headerlink" title="四、MR程序运行机制与shuffle"></a>四、MR程序运行机制与shuffle</h2><h3 id="MR运行流程"><a href="#MR运行流程" class="headerlink" title="MR运行流程"></a>MR运行流程</h3><p><img src="/images/mrlc.png" alt="" title="mr运行流程"><br>详细流程：<br>1、    maptask收集我们的map()方法输出的kv对，放到内存缓冲区中<br>2、    从内存缓冲区不断溢出本地磁盘文件，可能会溢出多个文件<br>3、    多个溢出文件会被合并成大的溢出文件<br>4、    在溢出过程中，及合并的过程中，都要调用partitoner进行分组和针对key进行排序<br>5、    reducetask根据自己的分区号，去各个maptask机器上取相应的结果分区数据<br>6、    reducetask会取到同一个分区的来自不同maptask的结果文件，reducetask会将这些文件再进行合并（归并排序）<br>7、    合并成大文件后，shuffle的过程也就结束了，后面进入reducetask的逻辑运算过程（从文件中取出一个一个的键值对group，调用用户自定义的reduce()方法）</p>
+<p>Shuffle中的缓冲区大小会影响到mapreduce程序的执行效率，原则上说，缓冲区越大，磁盘io的次数越少，执行速度就越快<br>缓冲区的大小可以通过参数调整,  参数：io.sort.mb  默认100M</p>
+<h3 id="shuffle"><a href="#shuffle" class="headerlink" title="shuffle"></a>shuffle</h3><p>mapreduce中，map阶段处理的数据如何传递给reduce阶段，是mapreduce框架中最关键的一个流程，这个流程就叫shuffle；<br>shuffle: 洗牌、发牌——（核心机制：数据分区，排序，缓存）；<br>具体来说：就是将maptask输出的处理结果数据，分发给reducetask，并在分发的过程中，对数据按key进行了分区和排序。<br>shuffle是MR处理流程中的一个过程，它的每一个处理步骤是分散在各个map task和reduce task节点上完成的，整体来看，分为3个操作：<br>1.分区partition<br>2.Sort根据key排序<br>3.Combiner进行局部value的合并<br>在接下来的文章中将通过具体的实战去具体体现三个操作的作用<br><a href="www.baidu.com">链接1</a> <a href="%E9%93%BE%E6%8E%A52">链接2</a> <a href="www.baidu.com">链接3</a> </p>
+<h2 id="五、MapTask并行度决定机制与切片"><a href="#五、MapTask并行度决定机制与切片" class="headerlink" title="五、MapTask并行度决定机制与切片"></a>五、MapTask并行度决定机制与切片</h2><h3 id="MapTask并行度决定机制"><a href="#MapTask并行度决定机制" class="headerlink" title="MapTask并行度决定机制"></a>MapTask并行度决定机制</h3><p>一个job的map阶段并行度由客户端在提交job时决定<br>而客户端对map阶段并行度的规划的基本逻辑为：<br>将待处理数据执行逻辑切片（即按照一个特定切片大小，将待处理数据划分成逻辑上的多个split），然后每一个split分配一个mapTask并行实例处理<br>这段逻辑及形成的切片规划描述文件，由FileInputFormat实现类的getSplits()方法完成。</p>
+<h3 id="FileInputFormat切片机制"><a href="#FileInputFormat切片机制" class="headerlink" title="FileInputFormat切片机制"></a>FileInputFormat切片机制</h3><p>a)    简单地按照文件的内容长度进行切片<br>b)    切片大小，默认等于block大小<br>c)    切片时不考虑数据集整体，而是逐个针对每一个文件单独切片<br>默认情况下，切片大小=blocksize，但是，不论怎么调参数，都不能让多个小文件“划入”一个split。<br>选择并发数的影响因素：<br>运算节点的硬件配置<br>运算任务的类型：CPU密集型还是IO密集型<br>运算任务的数据量<br><img src="/images/mrsplit.png" alt="" title="mrsplit"></p>
+<h3 id="map并行度的经验"><a href="#map并行度的经验" class="headerlink" title="map并行度的经验"></a>map并行度的经验</h3><p>如果硬件配置为2*12core + 64G，恰当的map并行度是大约每个节点20-100个map，最好每个maptask的执行时间至少一分钟。<br>如果job的每个map或者 reduce task的运行时间都只有30-40秒钟，那么就减少该job的map或者reduce数，每一个task(map|reduce)的setup和加入到调度器中进行调度，这个中间的过程可能都要花费几秒钟，所以如果每个task都非常快就跑完了，就会在task的开始和结束的时候浪费太多的时间。<br>配置task的JVM重用可以改善该问题：<br>（mapred.job.reuse.jvm.num.tasks，默认是1，表示一个JVM上最多可以顺序执行的task数目（属于同一个Job）是1。也就是说一个task启一个JVM）</p>
+<p>如果input的文件非常的大，比如一个文件2G，同时，机器性能又比较好，那么，可以考虑将hdfs上的每个block size设大，比如设成256MB或者512MB<br>\&lt;所谓经验，是在特定数据、特定机器配置、特定业务逻辑场景下，试出来的></p>
+<h2 id="六、ReduceTask并行度的决定"><a href="#六、ReduceTask并行度的决定" class="headerlink" title="六、ReduceTask并行度的决定"></a>六、ReduceTask并行度的决定</h2><p>reducetask的并行度同样影响整个job的执行并发度和执行效率，但与maptask的并发数由切片数决定不同，Reducetask数量的决定是可以直接手动设置：</p>
+<p>//默认值是1，手动设置为4<br>job.setNumReduceTasks(4);</p>
+<p>如果数据分布不均匀，就有可能在reduce阶段产生数据倾斜<br>注意： reducetask数量并不是任意设置，还要考虑业务逻辑需求，有些情况下，需要计算全局汇总结果，就只能有1个reducetask</p>
+<p>尽量不要运行太多的reduce task。对大多数job来说，最好rduce的个数最多和集群中的reduce持平，或者比集群的 reduce slots小。这个对于小集群而言，尤其重要。</p>
+]]></content>
+    </entry>
+    
+    <entry>
+      <title><![CDATA[Hadoop2.x——MR参数优化]]></title>
+      <url>http://spark8.tech/2015/10/14/mrziyuanyouhua/</url>
+      <content type="html"><![CDATA[<a id="more"></a>
+<h2 id="1-资源相关参数"><a href="#1-资源相关参数" class="headerlink" title="1.  资源相关参数"></a>1.  资源相关参数</h2><p>以下参数是在用户自己的mr应用程序中配置就可以生效</p>
+<blockquote>
+<p>(1) mapreduce.map.memory.mb: 一个Map Task可使用的资源上限（单位:MB），默认为1024。如果Map Task实际使用的资源量超过该值，则会被强制杀死。<br>(2) mapreduce.reduce.memory.mb: 一个Reduce Task可使用的资源上限（单位:MB），默认为1024。如果Reduce Task实际使用的资源量超过该值，则会被强制杀死。<br>(3) mapreduce.map.java.opts: Map Task的JVM参数，你可以在此配置默认的java heap size等参数, e.g.“-Xmx1024m -verbose:gc -Xloggc:/tmp/@taskid@.gc” （@taskid@会被Hadoop框架自动换为相应的taskid）, 默认值: “”<br>(4) mapreduce.reduce.java.opts: Reduce Task的JVM参数，你可以在此配置默认的java heap size等参数, e.g.“-Xmx1024m -verbose:gc -Xloggc:/tmp/@taskid@.gc”, 默认值: “”<br>(5) mapreduce.map.cpu.vcores: 每个Map task可使用的最多cpu core数目, 默认值: 1<br>(6) mapreduce.reduce.cpu.vcores: 每个Reduce task可使用的最多cpu core数目, 默认值: 1</p>
+</blockquote>
+<p>//应该在yarn启动之前就配置在服务器的配置文件中才能生效</p>
+<blockquote>
+<p>(7) yarn.scheduler.minimum-allocation-mb      1024   给应用程序container分配的最小内存<br>(8) yarn.scheduler.maximum-allocation-mb      8192    给应用程序container分配的最大内存<br>(9) yarn.scheduler.minimum-allocation-vcores    1<br>(10)yarn.scheduler.maximum-allocation-vcores    32<br>(11)yarn.nodemanager.resource.memory-mb   8192  </p>
+</blockquote>
+<p>//shuffle性能优化的关键参数，应在yarn启动之前就配置好</p>
+<blockquote>
+<p>(12)mapreduce.task.io.sort.mb   100         //shuffle的环形缓冲区大小，默认100m<br>(13)mapreduce.map.sort.spill.percent   0.8    //环形缓冲区溢出的阈值，默认80%</p>
+<h2 id="2-容错相关参数"><a href="#2-容错相关参数" class="headerlink" title="2. 容错相关参数"></a>2. 容错相关参数</h2><p>(1) mapreduce.map.maxattempts: 每个Map Task最大重试次数，一旦重试参数超过该值，则认为Map Task运行失败，默认值：4。<br>(2) mapreduce.reduce.maxattempts: 每个Reduce Task最大重试次数，一旦重试参数超过该值，则认为Map Task运行失败，默认值：4。<br>(3) mapreduce.map.failures.maxpercent: 当失败的Map Task失败比例超过该值为，整个作业则失败，默认值为0. 如果你的应用程序允许丢弃部分输入数据，则该该值设为一个大于0的值，比如5，表示如果有低于5%的Map Task失败（如果一个Map Task重试次数超过mapreduce.map.maxattempts，则认为这个Map Task失败，其对应的输入数据将不会产生任何结果），整个作业扔认为成功。<br>(4) mapreduce.reduce.failures.maxpercent: 当失败的Reduce Task失败比例超过该值为，整个作业则失败，默认值为0.<br>(5) mapreduce.task.timeout: Task超时时间，经常需要设置的一个参数，该参数表达的意思为：如果一个task在一定时间内没有任何进入，即不会读取新的数据，也没有输出数据，则认为该task处于block状态，可能是卡住了，也许永远会卡主，为了防止因为用户程序永远block住不退出，则强制设置了一个该超时时间（单位毫秒），默认是300000。如果你的程序对每条输入数据的处理时间过长（比如会访问数据库，通过网络拉取数据等），建议将该参数调大，该参数过小常出现的错误提示  是“AttemptID:attempt_14267829456721_123456_m_000224_0 Timed out after 300 secsContainer killed by the ApplicationMaster.”。</p>
+<h2 id="3-本地运行mapreduce-作业"><a href="#3-本地运行mapreduce-作业" class="headerlink" title="3.  本地运行mapreduce 作业"></a>3.  本地运行mapreduce 作业</h2><p>设置以下几个参数:<br>mapreduce.framework.name=local<br>mapreduce.jobtracker.address=local<br>fs.defaultFS=local</p>
+<h2 id="4-效率和稳定性相关参数"><a href="#4-效率和稳定性相关参数" class="headerlink" title="4. 效率和稳定性相关参数"></a>4. 效率和稳定性相关参数</h2><p>(1) mapreduce.map.speculative: 是否为Map Task打开推测执行机制，默认为false<br>(2) mapreduce.reduce.speculative: 是否为Reduce Task打开推测执行机制，默认为false<br>(3) mapreduce.job.user.classpath.first &amp; mapreduce.task.classpath.user.precedence：当同一个class同时出现在用户jar包和hadoop jar中时，优先使用哪个jar包中的class，默认为false，表示优先使用hadoop jar中的class。<br>(4) mapreduce.input.fileinputformat.split.minsize: FileInputFormat做切片时的最小切片大小，(5)mapreduce.input.fileinputformat.split.maxsize:  FileInputFormat做切片时的最大切片大小 (切片的默认大小就等于blocksize，即 134217728) </p>
+</blockquote>
+]]></content>
+    </entry>
+    
+    <entry>
+      <title><![CDATA[自定义GroupingComparator分组取Top1]]></title>
+      <url>http://spark8.tech/2015/10/13/groupingCompa/</url>
+      <content type="html"><![CDATA[<a id="more"></a>
+<h1 id="需求描述"><a href="#需求描述" class="headerlink" title="需求描述"></a>需求描述</h1><p>有如下订单数据<br><img src="/images/ddsj.png" alt="" title="ddsj"><br>现在需要求出每一个订单中成交金额最大的一笔交易</p>
+<h2 id="实现分析"><a href="#实现分析" class="headerlink" title="实现分析"></a>实现分析</h2><p>1.利用“订单id和成交金额”作为key，可以将map阶段读取到的所有订单数据按照id分区，按照金额排序，发送到reduce<br>2、在reduce端利用groupingcomparator将订单id相同的kv聚合成组，然后取第一个即是最大值</p>
+<h2 id="代码实现"><a href="#代码实现" class="headerlink" title="代码实现"></a>代码实现</h2><p>自定义groupingcomparator<br>      /<em>*
+      </em>用于控制shuffle过程中reduce端对kv对的聚合逻辑<br>      <em>
+      </em>/<br>        public class ItemidGroupingComparator extends WritableComparator {</p>
+<pre><code>    protected ItemidGroupingComparator() {
 
-                       // 判断事件类型，此处只处理子节点变化事件
-                       if (event.getType() == EventType.NodeChildrenChanged &amp;&amp; event.getPath().equals(&quot;/&quot; + groupNode)) {
-                           //获取子节点，并对父节点进行监听
-                           List&lt;String&gt; childrenNodes = zk.getChildren(&quot;/&quot; + groupNode, true);
-                           String thisNode = thisPath.substring((&quot;/&quot; + groupNode + &quot;/&quot;).length());
-                           // 去比较是否自己是最小id
-                           Collections.sort(childrenNodes);
-                           if (childrenNodes.indexOf(thisNode) == 0) {
-                               //访问共享资源处理业务，并且在处理完成之后删除锁
-                               doSomething();
+    super(OrderBean.class, true);
+    }
 
-                               //重新注册一把新的锁
-                               thisPath = zk.create(&quot;/&quot; + groupNode + &quot;/&quot; + subNode, null, Ids.OPEN_ACL_UNSAFE,
-                                       CreateMode.EPHEMERAL_SEQUENTIAL);
-                           }
-                       }
-                   } catch (Exception e) {
-                       e.printStackTrace();
-                   }
-               }
-           });
 
-           // 1、程序一进来就先注册一把锁到zk上
-           thisPath = zk.create(&quot;/&quot; + groupNode + &quot;/&quot; + subNode, null, Ids.OPEN_ACL_UNSAFE,
-                   CreateMode.EPHEMERAL_SEQUENTIAL);
+    @Override
+    public int compare(WritableComparable a, WritableComparable b) {
+    OrderBean abean = (OrderBean) a;
+    OrderBean bbean = (OrderBean) b;
 
-           // wait一小会，便于观察
-           Thread.sleep(new Random().nextInt(1000));
+    //将item_id相同的bean都视为相同，从而聚合为一组
+    return abean.getItemid().compareTo(bbean.getItemid());
+    }
+}
+</code></pre><p>定义订单信息bean<br>        /<em>*
+         </em>订单信息bean，实现hadoop的序列化机制<br>         <em>
+         </em>/<br>        public class OrderBean implements WritableComparable<orderbean>{<br>            private Text itemid;<br>            private DoubleWritable amount;</orderbean></p>
+<pre><code>    public OrderBean() {
+    }
+    public OrderBean(Text itemid, DoubleWritable amount) {
+        set(itemid, amount);
+    }
 
-           // 从zk的锁父目录下，获取所有子节点，并且注册对父节点的监听
-           List&lt;String&gt; childrenNodes = zk.getChildren(&quot;/&quot; + groupNode, true);
+    public void set(Text itemid, DoubleWritable amount) {
 
-           // 如果争抢资源的程序就只有自己，则可以直接去访问共享资源 
-           if (childrenNodes.size() == 1) {
-               doSomething();
-               thisPath = zk.create(&quot;/&quot; + groupNode + &quot;/&quot; + subNode, null, Ids.OPEN_ACL_UNSAFE,
-                       CreateMode.EPHEMERAL_SEQUENTIAL);
-           }
-       }
+        this.itemid = itemid;
+        this.amount = amount;
 
-       /**
-        * 处理业务逻辑，并且在最后释放锁
-        */
-       private void doSomething() throws Exception {
-           try {
-               System.out.println(&quot;gain lock: &quot; + thisPath);
-               Thread.sleep(2000);
-               // do something
-           } finally {
-               System.out.println(&quot;finished: &quot; + thisPath);
-       //删除之前的锁节点
-               zk.delete(this.thisPath, -1);
-           }
-       }
+    }
 
-       public static void main(String[] args) throws Exception {
-           DistributedClientLock dl = new DistributedClientLock();
-           dl.connectZookeeper();
-           Thread.sleep(Long.MAX_VALUE);
-       }
+    public Text getItemid() {
+        return itemid;
+    }
+
+    public DoubleWritable getAmount() {
+        return amount;
+    }
+
+    @Override
+    public int compareTo(OrderBean o) {
+        int cmp = this.itemid.compareTo(o.getItemid());
+        if (cmp == 0) {
+
+        cmp = -this.amount.compareTo(o.getAmount());
+        }
+        return cmp;
+    }
+
+    @Override
+    public void write(DataOutput out) throws IOException {
+    out.writeUTF(itemid.toString());
+    out.writeDouble(amount.get());
+
+    }
+
+    @Override
+    public void readFields(DataInput in) throws IOException {
+        String readUTF = in.readUTF();
+        double readDouble = in.readDouble();
+
+        this.itemid = new Text(readUTF);
+        this.amount= new DoubleWritable(readDouble);
+    }
+
+
+    @Override
+    public String toString() {
+        return itemid.toString() + &quot;\t&quot; + amount.get();
+    }
+}
+</code></pre><p>编写mapreduce处理流程<br>        /<em>*<br>        利用secondarysort机制输出每种item订单金额最大的记录<br>        @author duanhaitao@itcast.cn
+         </em><br>         */<br>        public class SecondarySort {</p>
+<pre><code>static class SecondarySortMapper extends Mapper&lt;LongWritable, Text, OrderBean, NullWritable&gt;{
+
+    OrderBean bean = new OrderBean();
+
+@Override
+protected void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
+
+    String line = value.toString();
+    String[] fields = StringUtils.split(line, &quot;\t&quot;);
+
+    bean.set(new Text(fields[0]), new DoubleWritable(Double.parseDouble(fields[1])));
+
+    context.write(bean, NullWritable.get());
+
+    }
+
+}
+
+static class SecondarySortReducer extends Reducer&lt;OrderBean, NullWritable, OrderBean, NullWritable&gt;{
+
+
+//在设置了groupingcomparator以后，这里收到的kv数据 就是：  &lt;1001 87.6&gt;,null  &lt;1001 76.5&gt;,null  .... 
+//此时，reduce方法中的参数key就是上述kv组中的第一个kv的key：&lt;1001 87.6&gt;
+//要输出同一个item的所有订单中最大金额的那一个，就只要输出这个key
+@Override
+protected void reduce(OrderBean key, Iterable&lt;NullWritable&gt; values, Context context) throws IOException, InterruptedException {
+    context.write(key, NullWritable.get());
+    }
+}
+
+
+public static void main(String[] args) throws Exception {
+
+    Configuration conf = new Configuration();
+    Job job = Job.getInstance(conf);
+
+    job.setJarByClass(SecondarySort.class);
+
+    job.setMapperClass(SecondarySortMapper.class);
+    job.setReducerClass(SecondarySortReducer.class);
+
+
+    job.setOutputKeyClass(OrderBean.class);
+    job.setOutputValueClass(NullWritable.class);
+
+    FileInputFormat.setInputPaths(job, new Path(args[0]));
+    FileOutputFormat.setOutputPath(job, new Path(args[1]));
+    //指定shuffle所使用的GroupingComparator类
+    job.setGroupingComparatorClass(ItemidGroupingComparator.class);
+    //指定shuffle所使用的partitioner类
+    job.setPartitionerClass(ItemIdPartitioner.class);
+
+    job.setNumReduceTasks(3);
+
+    job.waitForCompletion(true);
+
+}
+
+}
+</code></pre>]]></content>
+    </entry>
+    
+    <entry>
+      <title><![CDATA[Hadoop2.x——共同好友问题]]></title>
+      <url>http://spark8.tech/2015/10/12/gongtonghaoyou/</url>
+      <content type="html"><![CDATA[<a id="more"></a>
+<h2 id="需求描述"><a href="#需求描述" class="headerlink" title="需求描述"></a>需求描述</h2><p>已知每人的好友，求两两之间的共同好友<br>    A:B,C,D,F,E,O<br>    B:A,C,E,K<br>    C:F,A,D,I<br>    D:A,E,F,L<br>    E:B,C,D,M,L<br>    F:A,B,C,D,E,O,M<br>    G:A,C,D,E,F<br>    H:A,C,D,E,O<br>    I:A,O<br>    J:B,O<br>    K:A,C,D<br>    L:D,E,F<br>    M:E,F,G<br>    O:A,H,I,J</p>
+<h2 id="设计思路"><a href="#设计思路" class="headerlink" title="设计思路"></a>设计思路</h2><p>step1：每一个人，都是哪些人的共同好友<br>A    I-K-C-B-G-F-H-O-D-<br>B    A-F-J-E-<br>C    A-E-B-H-F-G-K-<br>D    G-C-K-A-L-F-E-H-<br>E    G-M-L-H-A-F-B-D-<br>step2：第二个步骤的输入数据是上一个步骤的输出<br>把有共同好友的人，两两配对作为key，好友作为value发出去，以便在reduce中能拿到一个两两对的所有好友<br>a    b-d-f-g-h-i-k-o-     BD-A  BF-A  BG-A BH-A BI-A BK-A BO-A DF-A DG-A</p>
+<h2 id="代码实现"><a href="#代码实现" class="headerlink" title="代码实现"></a>代码实现</h2><p>Step1：<br>        public class CommonFriends {<br>            static class CommonFriendsMapper extends Mapper<longwritable, text,="" text=""> {<br>                // A:B,C,D,F,E,O B-A C-A D-A F-A E-A O-A<br>                @Override<br>                protected void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {<br>                    String line = value.toString();<br>                    String[] split = line.split(“:”);<br>                    String person = split[0];<br>                    String[] friends = split[1].split(“,”);<br>                    for (String f : friends) {<br>                        context.write(new Text(f), new Text(person));<br>                    }<br>                }<br>            }<br>            static class CommonFriendsReducer extends Reducer<text, text,="" text="">{<br>                //B {a,e,f,j}<br>                @Override<br>                protected void reduce(Text f, Iterable<text> persons, Context context) throws IOException, InterruptedException {<br>                    StringBuilder sb = new StringBuilder();<br>                    for(Text p:persons){<br>                        sb.append(p+”-“);<br>                    }<br>                    //B A-E-F-J<br>                    context.write(f, new Text(sb.toString()));<br>                }<br>            }<br>            public static void main(String[] args) throws Exception {<br>                Configuration conf = new Configuration();<br>                Job job = Job.getInstance(conf);<br>                job.setJarByClass(CommonFriends.class);<br>                job.setMapperClass(CommonFriendsMapper.class);<br>                job.setReducerClass(CommonFriendsReducer.class);<br>                job.setOutputKeyClass(Text.class);<br>                job.setOutputValueClass(Text.class);<br>                FileInputFormat.setInputPaths(job, new Path(“C:\wordcount\friends”));<br>                FileOutputFormat.setOutputPath(job, new Path(“c:/wordcount/friends-step1”));<br>                job.waitForCompletion(true);<br>            }<br>        }<br>step2：<br>        public class CommonFriendsStepTwo {<br>            static class CommonFriendsStepTwoMapper extends Mapper<longwritable, text,="" text=""> {<br>                // a    b-d-f-g-h-i-k-o-     BD-A  BF-A  BG-A BH-A BI-A BK-A BO-A DF-A DG-A<br>                @Override<br>                protected void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {<br>                    String line = value.toString();<br>                    String[] split = line.split(“\t”);<br>                    String friend = split[0];<br>                    String[] persons = split[1].split(“-“);<br>                    Arrays.sort(persons);<br>                    for(int i=0;i<persons.length-1;i++){ for(int="" j="i+1;j<persons.length;j++){" context.write(new="" text(persons[i]+"-"+persons[j]),="" new="" text(friend));="" }="" static="" class="" commonfriendssteptworeducer="" extends="" reducer<text,="" text,="" text="">{<br>                //BD-A BD-C BD-G<br>                @Override<br>                protected void reduce(Text pair, Iterable<text> friends, Context context) throws IOException, InterruptedException {<br>                    StringBuffer sb = new StringBuffer();<br>                    for(Text f:friends){<br>                        sb.append(f+ “,”);<br>                    }<br>                    context.write(pair, new Text(sb.toString()));<br>                }<br>            }<br>            public static void main(String[] args) throws Exception {<br>                Configuration conf = new Configuration();<br>                Job job = Job.getInstance(conf);<br>                job.setJarByClass(CommonFriendsStepTwo.class);<br>                job.setMapperClass(CommonFriendsStepTwoMapper.class);<br>                job.setReducerClass(CommonFriendsStepTwoReducer.class);<br>                job.setOutputKeyClass(Text.class);<br>                job.setOutputValueClass(Text.class);<br>                FileInputFormat.setInputPaths(job, new Path(“C:\wordcount\friends-step1”));<br>                FileOutputFormat.setOutputPath(job, new Path(“C:\wordcount\friends-step2”));<br>                job.waitForCompletion(true);<br>            }<br>        }</text></persons.length-1;i++){></longwritable,></text></text,></longwritable,></p>
+]]></content>
+    </entry>
+    
+    <entry>
+      <title><![CDATA[Hadoop2.x——倒排索引]]></title>
+      <url>http://spark8.tech/2015/10/10/daopaisuoyin/</url>
+      <content type="html"><![CDATA[<a id="more"></a>
+<h2 id="需求描述"><a href="#需求描述" class="headerlink" title="需求描述"></a>需求描述</h2><p>文档中找单词，当文档数越来越多时，直接打开文档找单词不靠谱(一个一个文档找比较慢)。<br>倒排索引：将单词出现在文档中的位置，记录下来。<br>如：a  -&gt;  1.txt,11.txt,56.txt</p>
+<h2 id="设计思路"><a href="#设计思路" class="headerlink" title="设计思路"></a>设计思路</h2><p>1、计算某个单词出现在一个文档中的次数<br>MR1阶段</p>
+<blockquote>
+<p> 单词     文档名称 次数<br>  分词器 IK<br>  获取文件名 inputSplit<br>  我和我的祖国 一刻也不能分割<br>  我<br>  我的祖国<br>  祖国<br>  ……<br>Map ：<br>KEYOUT: 我:文档名称<br> VALUEOUT: 1<br>SHUFFLE:<br>我:文档名称  Iterable1,1,1,1,1,1,1,1<br>Reduce：<br>我:文档名称 8<br>KEYOUT: 我<br>VALUEOUT： 文档名称 8</p>
+</blockquote>
+<p>2、计算一个单词出现在所有文档中的次数<br>MR2阶段</p>
+<blockquote>
+<p>MAP<br>KEYIN:我<br>VALUEIN:文档名称 8<br>SHUFFLE:<br>我:  Iterable[“文档名称1 8”,”文档名称2 18”]<br>Reduce：<br>KEYOUT:我<br>VALUEOUT：权重值 ，总出现次数，“文档名称1 8”，“文档名称2 18”</p>
+<h2 id="代码开发"><a href="#代码开发" class="headerlink" title="代码开发"></a>代码开发</h2><p>源码请参见<a href="www.baidu.com">github链接</a><br>1.驱动类<br>        public class IndexJob {</p>
+</blockquote>
+<pre><code>public static void main(String[] args) throws Exception {
+    String map1inputpath = &quot;&quot;;
+    String reduce1outputmap2inputpath = &quot;&quot;;
+    String respath = &quot;&quot;;
+
+    //第一个job
+    Job job = Job.getInstance();
+
+    job.setMapperClass(IndexMap1.class);
+    job.setMapOutputKeyClass(Text.class);
+    job.setMapOutputValueClass(IntWritable.class);
+
+    job.setReducerClass(IndexReduce1.class);
+    job.setOutputKeyClass(Text.class);
+    job.setOutputValueClass(Text.class);
+
+    job.setNumReduceTasks(2);
+
+    FileInputFormat.setInputPaths(job,new Path(&quot;/&quot;));
+    FileOutputFormat.setOutputPath(job, new Path(&quot;/&quot;));
+
+    if(job.waitForCompletion(true)){
+        //第二个job
+        //可不可以公用一个job
+        job.setMapperClass(IndexMap2.class);
+        job.setMapOutputKeyClass(Text.class);
+        job.setMapOutputValueClass(Text.class);
+
+        job.setReducerClass(IndexReduce2.class);
+        job.setOutputKeyClass(Text.class);
+        job.setOutputValueClass(Text.class);
+
+        job.setNumReduceTasks(2);
+
+        FileInputFormat.setInputPaths(job,new Path(&quot;/&quot;));
+        FileOutputFormat.setOutputPath(job, new Path(&quot;/&quot;));
+
+        job.waitForCompletion(true);
+    }
+}
+}
+</code></pre><p>2.IndexMap1类<br>        public class IndexMap1 extends Mapper<longwritable,text,text,intwritable> {</longwritable,text,text,intwritable></p>
+<pre><code>@Override
+protected void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
+    byte[] bytes = value.getBytes();
+
+    //2、对数据进行分词
+    InputStream inputStream = new ByteArrayInputStream(bytes);
+    Reader reader = new InputStreamReader(inputStream);
+    IKSegmenter ikSegmenter = new IKSegmenter(reader, true);
+
+    //获得文档名称
+    FileSplit inputSplit = (FileSplit) context.getInputSplit();
+    String fileName  = inputSplit.getPath().getName();
+
+    //4、map端词条出现次数统计
+    Lexeme t;
+    while ((t = ikSegmenter.next()) != null) {
+        context.write(new Text(t.getLexemeText()+&quot;:&quot;+fileName),new IntWritable(1));
+    }
+}
+}
+</code></pre><p>3.Index2Reduce1类<br>        public class IndexReduce1 extends Reducer<text,intwritable,text,text> {</text,intwritable,text,text></p>
+<pre><code>@Override
+protected void reduce(Text key, Iterable&lt;IntWritable&gt; values, Context context) throws IOException, InterruptedException {
+    Integer sum=0;
+    for(IntWritable count:values){
+        sum+=count.get();
+    }
+    String[] arrStr = key.toString().split(&quot;:&quot;);
+    key.set(arrStr[0]);
+    context.write(key,new Text(arrStr[1]+&quot;:&quot;+sum));
+}
+}
+</code></pre><p>4.IndexMap2类<br>        public class IndexMap2 extends Mapper<text,longwritable,text,text> {</text,longwritable,text,text></p>
+<pre><code>@Override
+protected void map(Text key, LongWritable value, Context context) throws IOException, InterruptedException {
+    String[] arrStr = value.toString().split(&quot; &quot;);
+    context.write(new Text(arrStr[0]),new Text(arrStr[1]));
+}
+}
+</code></pre><p>5.IndexReduce2类<br>        public class IndexReduce2 extends Reducer<text,text,text,text> {</text,text,text,text></p>
+<pre><code>@Override
+protected void reduce(Text key, Iterable&lt;Text&gt; values, Context context) throws IOException, InterruptedException {
+    int sum =0;
+    StringBuffer sb = new StringBuffer();
+    for(Text txt:values){
+        sb.append(txt);
+        sb.append(&quot;,&quot;);
+        String[] arrStr = values.toString().split(&quot;:&quot;);
+        sum += Integer.parseInt(arrStr[1]);
+    }
+    context.write(key,new Text(sum + &quot;&quot; + &quot;\t&quot; + sb.toString()));
+}
+}
+</code></pre>]]></content>
+    </entry>
+    
+    <entry>
+      <title><![CDATA[Hadoop2.x——自定义输出格式重写outputformat]]></title>
+      <url>http://spark8.tech/2015/10/09/zidingyiot/</url>
+      <content type="html"><![CDATA[<a id="more"></a>
+<h2 id="需求描述"><a href="#需求描述" class="headerlink" title="需求描述"></a>需求描述</h2><p>现有一些原始日志需要做增强解析处理，流程<br>1、从原始日志文件中读取数据<br>2、根据日志中的一个URL字段到外部知识库中获取信息增强到原始日志<br>3、如果成功增强，则输出到增强结果目录；如果增强失败，则抽取原始数据中URL字段输出到待爬清单目录</p>
+<h2 id="实现思路"><a href="#实现思路" class="headerlink" title="实现思路"></a>实现思路</h2><p>程序的关键点是要在一个mapreduce程序中根据数据的不同输出两类结果到不同目录，这类灵活的输出需求可以通过自定义outputformat来实现<br>实现要点：<br>1、在mapreduce中访问外部资源<br>2、自定义outputformat，改写其中的recordwriter，改写具体输出数据的方法write()</p>
+<h2 id="代码实现"><a href="#代码实现" class="headerlink" title="代码实现"></a>代码实现</h2><p>代码实现如下：<br>数据库获取数据的工具<br>        public class DBLoader {<br>            public static void dbLoader(HashMap<string, string=""> ruleMap) throws Exception {</string,></p>
+<pre><code>        Connection conn = null;
+        Statement st = null;
+        ResultSet res = null;
+
+        try {
+            Class.forName(&quot;com.mysql.jdbc.Driver&quot;);
+            conn = DriverManager.getConnection(&quot;jdbc:mysql://hdp-node-01:3306/urldb&quot;, &quot;root&quot;, &quot;root&quot;);
+            st = conn.createStatement();
+            res = st.executeQuery(&quot;select url,content from url_rule&quot;);
+            while (res.next()) {
+                ruleMap.put(res.getString(1), res.getString(2));
+            }
+        } finally 
+            try{
+                if(res!=null){
+                    res.close();
+                if(st!=null)
+                    st.close();
+                if(conn!=null)
+                    conn.close();
+            }catch(Exception e){
+                e.printStackTrace();    }
+        }
+    }
+}
+</code></pre><p>FlowBean<br>        public class FlowBean implements WritableComparable<flowbean> {</flowbean></p>
+<pre><code>    private String url;
+    private long upflow;
+
+    public FlowBean() {
+    }
+
+    public void set(String url, long upflow) {
+
+        this.url = url;
+        this.upflow = upflow;
+
+    }
+
+    public String getUrl() {
+        return url;
+    }
+
+    public void setUrl(String url) {
+        this.url = url;
+    }
+
+    public long getUpflow() {
+        return upflow;
+    }
+
+    public void setUpflow(long upflow) {
+        this.upflow = upflow;
+    }
+
+    @Override
+    public void readFields(DataInput in) throws IOException {
+
+        url = in.readUTF();
+        upflow = in.readLong();
+
+    }
+
+    @Override
+    public void write(DataOutput out) throws IOException 
+        out.writeUTF(url);
+        out.writeLong(upflow);
+    @Override
+    public int compareTo(FlowBean o) {
+        return this.upflow &gt; o.getUpflow() ? -1 : 1;
+    }    
+    @Override
+    public String toString() 
+
+        return  this.url + &quot;\t&quot; + this.upflow;
+
+    public static void main(String[] args) 
+        String ss = &quot;1374609503.88    1374609503.92    1374609503.92    1374609504.08    110    5    8613674936776    460003460238162    3595900488375164    2    460    0    14306            20193    10.184.41.121    123.125.114.195    45926    80    6    cmnet    1    221.177.156.14    221.177.217.145    221.177.156.14    221.177.217.155    mobads-logs.baidu.com    http://mobads-logs.baidu.com/dc?type=20&amp;st=pv&amp;rnd=0.9601120455190539        Mozilla/5.0 (Linux; U; Android 2.3.4; zh-CN; ST18i Build/4.0.2.A.0.62) AppleWebKit/534.31 (KHTML, like Gecko) UCBrowser/9.1.1.309 U3/0.8.0 Mobile Safari/534.31    GET    200    1317    291    7    2    0    0    7    2    0    0    0    0    http://mobads-logs.baidu.com/dc?type=20&amp;st=pv&amp;rnd=0.9601120455190539    5903902610650624011    5903902862210048011    5966330&quot;;
+        String[] fields = StringUtils.split(ss,&quot;\t&quot;);
+        System.out.println(fields[26]);
+        System.out.println(fields[30]);    
+}
+</code></pre><p>开发mapreduce处理流程<br>        /**</p>
+<pre><code> * 日志增强：从原始日志中获取url，然后去知识库查找内容信息标签，追加到原始日志中
+ * 如果查不到的url，就输出到带爬清单中
+ * 
+ * @author
+ * 
+ */
+public class LogEnhancer extends Configured implements Tool{
+
+    static class LogEnhancerMapper extends Mapper&lt;LongWritable, Text, Text, NullWritable&gt; {
+
+        HashMap&lt;String, String&gt; knowledgeMap = new HashMap&lt;String, String&gt;();
+
+        /**
+         * maptask
+         */
+        @Override
+        protected void setup(Context context) throws IOException, InterruptedException {
+
+            try {
+                DBLoader.dbLoader(knowledgeMap);
+            } catch (Exception e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
+
+        }
+
+        @Override
+        protected void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
+
+            String line = value.toString();
+
+            String[] fields = StringUtils.split(line, &quot;\t&quot;);
+
+            try {
+                String url = fields[26];
+
+                // 从规则库中匹配标签信息
+                String content = knowledgeMap.get(url);
+
+                // 判断规则库匹配结果
+                String result = &quot;&quot;;
+                if (null == content) {
+                    // 如果匹配失败，则将这条url到带爬清单文件中
+                    result = url + &quot;\t&quot; + &quot;tocrawl\n&quot;;
+                } else {
+                    // 如果匹配成功，则将这条“原始日志+内容标签”输出到增强日志文件中
+                    result = line + &quot;\t&quot; + content + &quot;\n&quot;;
+                }
+
+                context.write(new Text(result), NullWritable.get());
+            } catch (Exception e) {
+
+            }
+        }
+
+    }
+
+    public static void main(String[] args) throws Exception {
+
+        Configuration conf = new Configuration();
+
+        Job job = Job.getInstance(conf);
+
+        job.setJarByClass(LogEnhancer.class);
+
+        job.setMapperClass(LogEnhancerMapper.class);
+
+        job.setOutputKeyClass(Text.class);
+        job.setOutputValueClass(NullWritable.class);
+
+        // 要控制不同的内容写往不同的目标路径，可以采用自定义outputformat的方法
+        job.setOutputFormatClass(LogEnhancerOutputFormat.class);
+
+        FileInputFormat.setInputPaths(job, new Path(args[0]));
+
+        //尽管我们用的是自定义outputformat，但是它是继承制fileoutputformat
+        //在fileoutputformat中，必须输出一个success文件，所以在此还需要设置输出path
+        FileOutputFormat.setOutputPath(job, new Path(args[1]));
+
+        //不需要reducer
+        job.setNumReduceTasks(0);
+
+
+        job.waitForCompletion(true);
+        System.exit(0);
+
+    }
+    @Override
+    public int run(String[] args) throws Exception {
+        // TODO Auto-generated method stub
+        return 0;
+    }
+}
+</code></pre><p>自定义outputformat<br>        public class LogEnhancerOutputFormat extends FileOutputFormat<text, nullwritable="">{</text,></p>
+<pre><code>    @Override
+    public RecordWriter&lt;Text, NullWritable&gt; getRecordWriter(TaskAttemptContext context) throws IOException, InterruptedException {
+
+
+        FileSystem fs = FileSystem.get(context.getConfiguration());
+        Path enhancePath = new Path(&quot;hdfs://hadoop01:9000/wordcount/enhancelog/enhanced.log&quot;);
+        Path toCrawlPath = new Path(&quot;hdfs://hadoop01:9000/wordcount/tocrawl/tocrawl.log&quot;);
+
+        FSDataOutputStream enhanceOut = fs.create(enhancePath);
+        FSDataOutputStream toCrawlOut = fs.create(toCrawlPath);
+
+
+        return new MyRecordWriter(enhanceOut,toCrawlOut);
+    }
+
+
+
+    static class MyRecordWriter extends RecordWriter&lt;Text, NullWritable&gt;{
+
+        FSDataOutputStream enhanceOut = null;
+        FSDataOutputStream toCrawlOut = null;
+
+        public MyRecordWriter(FSDataOutputStream enhanceOut, FSDataOutputStream toCrawlOut) {
+            this.enhanceOut = enhanceOut;
+            this.toCrawlOut = toCrawlOut;
+        }
+
+        @Override
+        public void write(Text key, NullWritable value) throws IOException, InterruptedException {
+
+            //判断数据的一些标记，根据不同标记写往不同文件
+            //增日志写往enhanceOut，待爬清单写往toCrawlOut
+            if(key.toString().contains(&quot;tocrawl&quot;)){
+                toCrawlOut.write(key.toString().getBytes());
+            }else{
+                enhanceOut.write(key.toString().getBytes());
+            }
+
+        }
+
+        @Override
+        public void close(TaskAttemptContext context) throws IOException, InterruptedException {
+
+            if(toCrawlOut!=null){
+                toCrawlOut.close();
+            }
+            if(enhanceOut!=null){
+                enhanceOut.close();
+            }
+
+        }
+
+
+    }
 
 
 }
@@ -951,11 +1570,31 @@ public Map&lt;String, Double&gt; recommend(String userName) {
     </entry>
     
     <entry>
-      <title><![CDATA[Zookeeper-原理补充]]></title>
-      <url>http://spark8.tech/2016/03/11/zkyuanli/</url>
+      <title><![CDATA[Hadoop2.x——分布式缓存(解决数据倾斜问题)]]></title>
+      <url>http://spark8.tech/2015/10/08/fbshchadoop/</url>
       <content type="html"><![CDATA[<a id="more"></a>
-<h2 id="Zookepper的选举机制（保证数据一致性的核心算法paxos）"><a href="#Zookepper的选举机制（保证数据一致性的核心算法paxos）" class="headerlink" title="Zookepper的选举机制（保证数据一致性的核心算法paxos）"></a>Zookepper的选举机制（保证数据一致性的核心算法paxos）</h2><p>以一个简单的例子来说明整个选举的过程.<br>假设有五台服务器组成的zookeeper集群,它们的id从1-5,同时它们都是最新启动的,也就是没有历史数据,在存放数据量这一点上,都是一样的.假设这些服务器依序启动,来看看会发生什么.<br>1) 服务器1启动,此时只有它一台服务器启动了,它发出去的报没有任何响应,所以它的选举状态一直是LOOKING状态<br>2) 服务器2启动,它与最开始启动的服务器1进行通信,互相交换自己的选举结果,由于两者都没有历史数据,所以id值较大的服务器2胜出,但是由于没有达到超过半数以上的服务器都同意选举它(这个例子中的半数以上是3),所以服务器1,2还是继续保持LOOKING状态.<br>3) 服务器3启动,根据前面的理论分析,服务器3成为服务器1,2,3中的老大,而与上面不同的是,此时有三台服务器选举了它,所以它成为了这次选举的leader.<br>4) 服务器4启动,根据前面的分析,理论上服务器4应该是服务器1,2,3,4中最大的,但是由于前面已经有半数以上的服务器选举了服务器3,所以它只能接收当小弟的命了.<br>5) 服务器5启动,同4一样,当小弟.</p>
-<h2 id="非全新集群的选举机制-数据恢复"><a href="#非全新集群的选举机制-数据恢复" class="headerlink" title="非全新集群的选举机制(数据恢复)"></a>非全新集群的选举机制(数据恢复)</h2><p>那么，初始化的时候，是按照上述的说明进行选举的，但是当zookeeper运行了一段时间之后，有机器down掉，重新选举时，选举过程就相对复杂了。<br>需要加入数据version、leader id和逻辑时钟。<br>数据version：数据新的version就大，数据每次更新都会更新version。<br>Leader id：就是我们配置的myid中的值，每个机器一个。<br>逻辑时钟：这个值从0开始递增,每次选举对应一个值,也就是说:  如果在同一次选举中,那么这个值应该是一致的 ;  逻辑时钟值越大,说明这一次选举leader的进程更新.<br>选举的标准就变成：<br>1、逻辑时钟小的选举结果被忽略，重新投票<br>2、统一逻辑时钟后，数据id大的胜出<br>3、数据id相同的情况下，leader id大的胜出<br>根据这个规则选出leader。</p>
+<h2 id="需求分析"><a href="#需求分析" class="headerlink" title="需求分析"></a>需求分析</h2><p>上篇关于左连接的文章存在如下的问题<br>假设公司商品的数量有限，商品表记录不是有限<br>订单表：500万订单  产生一千万记录<br>商品表：100个产品   产生100条记录<br>仅要求在订单表后面加入商品名称这个需求，如果maptask分别从hdfs上远程读取订单表和商品表，再运行多个reducetask，网络和资源开销变得非常大，如果有将商品表缓存到运行maptask的本地nodemanager中，那么就可以省略reduce过程，极大的减少网络和资源的开销。</p>
+<h2 id="设计思路"><a href="#设计思路" class="headerlink" title="设计思路"></a>设计思路</h2><p>1.Job通过addCacheFile方法将商品表加入到缓存文件<br>2.在Map类中重写setup方法，从context中获取getCacheFile(“商品表”)，将商品信息加入到成员变量中<br>3 map方法中将商品信息加入到订单表</p>
+<h2 id="代码开发"><a href="#代码开发" class="headerlink" title="代码开发"></a>代码开发</h2><p>源码参见链接<a href="www.baidu.com" title="github">github</a><br>1.驱动类<br><img src="/images/fbshcqdl.png" alt="" title="fbshcqd"><br>2.Map类<br><img src="/images/fbshcmap.png" alt="" title="fbshcmap"></p>
+]]></content>
+    </entry>
+    
+    <entry>
+      <title><![CDATA[Hadoop2.x——左连接]]></title>
+      <url>http://spark8.tech/2015/10/07/hadoopzlj/</url>
+      <content type="html"><![CDATA[<a id="more"></a>
+<h2 id="需求描述"><a href="#需求描述" class="headerlink" title="需求描述"></a>需求描述</h2><p>有两张表，关联字段为pid，订单表中没有商品名称，需要对数据进行补全，使用MapReduce思想，进行编程。</p>
+<blockquote>
+<p> 订单数据表t_order：<br>  id    date        pid      amount<br> 1001    20150710    P0001    2<br> 1002    20150710    P0001    3<br> 1002    20150710    P0002    3</p>
+<p> 商品信息表t_product<br>  id        pname    category_id    price<br>  P0001    小米5    1000        2<br>  P0002    锤子T1    1000        3</p>
+<p>订单表中没有商品名称，需要对数据进行补全<br>1001    20150710    P0001    小米5     2<br>1002    20150710    P0001    小米5     3<br>1002    20150710    P0002    锤子T3  3</p>
+</blockquote>
+<h2 id="设计思路"><a href="#设计思路" class="headerlink" title="设计思路"></a>设计思路</h2><p>数据输入：order.txt、pd.txt<br>1、Map 阶段</p>
+<blockquote>
+<p>KEYOUT  pid<br>VALUEOUT OrderAllInfo writealbe(write,read)<br>输入两个文件的数据<br>VALUEIN 1001      20150710    P0001    2<br>VALUEIN 1001      20150710    P0001    2<br>VALUEIN 1001      20150710    P0001    2<br>来自不同的文件，文件名不一样<br>VALUEIN   P0001    小米5    1000    2<br>VALUEIN   P0001    小米5    1000    2<br>来自不同的文件，文件名不一样<br>能够在OrderAllInfo中加入一个tag标志，当文件名等于order，<br>tag取值为1 当文件名等于product时，tag取值为0<br>2、Reduce 阶段<br>KEYIN   pid<br>VALUEiN        iterable\<orderallinfo,orderallinfo,orderallinfo,orderallinfo\></orderallinfo,orderallinfo,orderallinfo,orderallinfo\></p>
+<p>OrderAllInfo tag=0 记录，商品记录只有一条      商品表<br>OrderAllInfo tag=1                                                     订单表<br>OrderAllInfo tag=1                          订单表<br>过程<br>OrderAllInfo tag=1 +  OrderAllInfo tag=0   = 新的 OrderAllInfo<br>OrderAllInfo tag=1 +  OrderAllInfo tag=0   = 新的 OrderAllInfo<br>得到<br>1001     20150710    P0001    小米5     2<br>1002    20150710    P0001    小米5     3<br>1002    20150710    P0002    锤子T3     3</p>
+<h2 id="代码开发"><a href="#代码开发" class="headerlink" title="代码开发"></a>代码开发</h2><p>源码请参考<a href="www.baidu.com">github链接</a>,以下为核心实现。<br>1.驱动类<br><img src="/images/zljqdl.png" alt="" title="zljqdl"><br>2.Map类<br><img src="/images/zljmapl.png" alt="" title="zljmap"><br>3.Reduce类<br><img src="/images/zljreducel.png" alt="" title="zljreducel"></p>
+</blockquote>
 ]]></content>
     </entry>
     
