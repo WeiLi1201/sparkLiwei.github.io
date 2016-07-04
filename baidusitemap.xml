@@ -4,6 +4,28 @@
 
     
   <url>
+    <loc>http://spark8.tech/2016/06/20/rdddx/</loc>
+    <lastmod>2016-07-04T05:14:07.000Z</lastmod>
+    <data>
+        <display>
+        <title>Spark1.6— RDD 根据电信基站数据计算用户常在地点</title>
+        <pubTime>2016-06-20T13:15:12.000Z</pubTime>
+        
+        <tag>Spark</tag>
+         
+        <tag>RDD</tag>
+         
+         
+           
+             
+              <breadCrumb title="Spark" url="http://spark8.tech/categories/Spark/"/>
+          
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
     <loc>http://spark8.tech/2015/10/09/zidingyiot/</loc>
     <lastmod>2016-07-03T12:43:52.000Z</lastmod>
     <data>
@@ -353,9 +375,9 @@
         <title>日志监控告警系统（一）</title>
         <pubTime>2016-05-17T15:25:22.000Z</pubTime>
         
-        <tag>storm</tag>
-         
         <tag>kafka</tag>
+         
+        <tag>storm</tag>
          
         <tag>mysql</tag>
          
@@ -363,28 +385,6 @@
            
              
               <breadCrumb title="storm" url="http://spark8.tech/categories/storm/"/>
-          
-        </display>
-    </data>
-    </url>
-
-    
-  <url>
-    <loc>http://spark8.tech/2016/06/20/rdddx/</loc>
-    <lastmod>2016-07-03T12:07:53.000Z</lastmod>
-    <data>
-        <display>
-        <title>Spark1.6— RDD 根据电信基站数据计算用户常在地点</title>
-        <pubTime>2016-06-20T13:15:12.000Z</pubTime>
-        
-        <tag>Spark</tag>
-         
-        <tag>RDD</tag>
-         
-         
-           
-             
-              <breadCrumb title="Spark" url="http://spark8.tech/categories/Spark/"/>
           
         </display>
     </data>
@@ -627,9 +627,9 @@
         
         <tag>flume</tag>
          
-        <tag>storm</tag>
-         
         <tag>kafka</tag>
+         
+        <tag>storm</tag>
          
          
            
