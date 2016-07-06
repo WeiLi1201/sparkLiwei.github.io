@@ -1,0 +1,95 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta http-equiv="content-type" content="text/html; charset=utf-8"><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport"><meta content="yes" name="apple-mobile-web-app-capable"><meta content="black-translucent" name="apple-mobile-web-app-status-bar-style"><meta content="HMmFpsFIIdXroD_bySStaKsE_InwsQEEVxA2Cne-P4o" name="google-site-verification"><meta content="telephone=no" name="format-detection"><meta name="description" content="spark8,Spark2.0"><title>Spark1.6—自定义排序规则，对比Hadoop MR | Spark8</title><link rel="stylesheet" type="text/css" href="/css/style.css?v=0.0.1"><link rel="stylesheet" type="text/css" href="//cdn.bootcss.com/normalize/4.1.1/normalize.min.css"><link rel="stylesheet" type="text/css" href="//cdn.bootcss.com/pure/0.6.0/pure-min.css"><link rel="stylesheet" type="text/css" href="//cdn.bootcss.com/pure/0.6.0/grids-responsive-min.css"><link rel="stylesheet" href="//cdn.bootcss.com/font-awesome/4.6.2/css/font-awesome.min.css"><script type="text/javascript" src="//cdn.bootcss.com/jquery/2.2.3/jquery.min.js"></script><link rel="Shortcut Icon" type="image/x-icon" href="/favicon.ico"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="apple-touch-icon-precomposed" href="/apple-touch-icon.png"></head><body><div class="body_container"><div id="header"><div class="site-name"><h1 class="hidden">Spark1.6—自定义排序规则，对比Hadoop MR</h1><a id="logo" href="/.">Spark8</a><p class="description">给理想一点时间</p></div><div id="nav-menu"><a href="/." class="current"><i class="fa fa-home"> 首页</i></a><a href="/archives/"><i class="fa fa-archive"> 归档</i></a><a href="/about/"><i class="fa fa-user"> 关于</i></a></div></div><div id="layout" class="pure-g"><div class="pure-u-1 pure-u-md-3-4"><div class="content_container"><div class="post"><h1 class="post-title">Spark1.6—自定义排序规则，对比Hadoop MR</h1><div class="post-meta">Jun 21, 2016<span> | </span><span class="category"><a href="/categories/Spark/">Spark</a></span><script src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js" async></script><span id="busuanzi_container_page_pv"> | <span id="busuanzi_value_page_pv"></span><span> Hits</span></span></div><a data-disqus-identifier="2016/06/21/sparksortby/" href="/2016/06/21/sparksortby/#disqus_thread" class="disqus-comment-count"></a><div class="post-content"><a id="more"></a>
+<h2 id="需求描述"><a href="#需求描述" class="headerlink" title="需求描述"></a>需求描述</h2><p>使用隐式转换，自定义排序规则</p>
+<h2 id="实现思路"><a href="#实现思路" class="headerlink" title="实现思路"></a>实现思路</h2><p>第一种方式：case class Girl 混入 Ordered<a href="#">Girl</a>接口，实现comapre方法，但是明显的高耦合<br>第二种方式：使用隐式转换，按sortBy要求 传入隐式值girlOrdering，实现解耦和自定义排序<br><img src="/images/sortby.png" alt=""></p>
+<h2 id="代码实现"><a href="#代码实现" class="headerlink" title="代码实现"></a>代码实现</h2><p>第一种方式：</p>
+<pre><code>object CustomSort {
+
+  def main(args: Array[String]) {
+    val conf = new SparkConf().setAppName(&quot;CustomSort&quot;).setMaster(&quot;local[2]&quot;)
+    val sc = new SparkContext(conf)
+    val rdd1 = sc.parallelize(List((&quot;yuihatano&quot;, 90, 28, 1), (&quot;angelababy&quot;, 90, 27, 2),(&quot;JuJingYi&quot;, 95, 22, 3)))
+    import OrderContext._
+    val rdd2 = rdd1.sortBy(x =&gt; Girl(x._2, x._3), false)
+    println(rdd2.collect().toBuffer)
+    sc.stop()
+  }
+
+}
+
+/**
+  * 第一种方式
+  * @param faceValue
+  * @param age
+*/
+case class Girl(val faceValue: Int, val age: Int) extends Ordered[Girl] with Serializable {
+  override def compare(that: Girl): Int = {
+    if(this.faceValue == that.faceValue) {
+      that.age - this.age
+    } else {
+      this.faceValue -that.faceValue
+    }
+  }
+}
+</code></pre><p>第二种方式：</p>
+<pre><code>case class Girl(faceValue: Int, age: Int) extends Serializable
+
+object OrderContext {
+  implicit val girlOrdering  = new Ordering[Girl] {
+    override def compare(x: Girl, y: Girl): Int = {
+      if(x.faceValue &gt; y.faceValue) 1
+      else if (x.faceValue == y.faceValue) {
+        if(x.age &gt; y.age) -1 else 1
+      } else -1
+    }
+  }
+}
+
+object CustomSort {
+
+  def main(args: Array[String]) {
+    val conf = new SparkConf().setAppName(&quot;CustomSort&quot;).setMaster(&quot;local[2]&quot;)
+    val sc = new SparkContext(conf)
+    val rdd1 = sc.parallelize(List((&quot;yuihatano&quot;, 90, 28, 1), (&quot;angelababy&quot;, 90, 27, 2),(&quot;JuJingYi&quot;, 95, 22, 3)))
+    import OrderContext._
+    val rdd2 = rdd1.sortBy(x =&gt; Girl(x._2, x._3), false)
+    println(rdd2.collect().toBuffer)
+    sc.stop()
+  }
+
+}
+</code></pre></div><script type="text/javascript" src="/js/share.js?v=0.0.1" async></script><a data-url="http://spark8.tech/2016/06/21/sparksortby/" data-id="ciqawn8jx0000gjw2e96mih8k" class="article-share-link">分享到</a><div class="tags"><a href="/tags/Spark/">Spark</a><a href="/tags/RDD/">RDD</a></div><div class="post-nav"><a href="/2016/06/21/sparkgb/" class="next">Spark1.6—RDD广播变量</a></div><div id="disqus_thread"><script>var disqus_shortname = 'sparkliwei';
+var disqus_identifier = '2016/06/21/sparksortby/';
+var disqus_title = 'Spark1.6—自定义排序规则，对比Hadoop MR';
+var disqus_url = 'http://spark8.tech/2016/06/21/sparksortby/';
+(function() {
+  var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+  dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+  (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+})();</script><script id="dsq-count-scr" src="//sparkliwei.disqus.com/count.js" async></script></div></div></div></div><div class="pure-u-1-4"><div id="sidebar"><div class="widget"><div class="search-form"><input id="local-search-input" placeholder="Search" type="text" name="q" results="0"/><div id="local-search-result"></div></div></div><div class="widget"><div class="widget-title"><i class="fa fa-folder-o"> 分类</i></div><ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/Linux/">Linux</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/RPC/">RPC</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/Spark/">Spark</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/hadoop/">hadoop</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/redis/">redis</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/scala/">scala</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/storm/">storm</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/zookeeper/">zookeeper</a></li></ul></div><div class="widget"><div class="widget-title"><i class="fa fa-star-o"> 标签</i></div><div class="tagcloud"><a href="/tags/map-reduce/" style="font-size: 15px;">map reduce</a> <a href="/tags/Linux/" style="font-size: 15px;">Linux</a> <a href="/tags/RPC/" style="font-size: 15px;">RPC</a> <a href="/tags/MR/" style="font-size: 15px;">MR</a> <a href="/tags/HDFS/" style="font-size: 15px;">HDFS</a> <a href="/tags/HA/" style="font-size: 15px;">HA</a> <a href="/tags/flume/" style="font-size: 15px;">flume</a> <a href="/tags/MapReduce/" style="font-size: 15px;">MapReduce</a> <a href="/tags/Redis/" style="font-size: 15px;">Redis</a> <a href="/tags/hive/" style="font-size: 15px;">hive</a> <a href="/tags/redis/" style="font-size: 15px;">redis</a> <a href="/tags/hadoop/" style="font-size: 15px;">hadoop</a> <a href="/tags/kafka/" style="font-size: 15px;">kafka</a> <a href="/tags/storm/" style="font-size: 15px;">storm</a> <a href="/tags/mysql/" style="font-size: 15px;">mysql</a> <a href="/tags/scala/" style="font-size: 15px;">scala</a> <a href="/tags/Spark/" style="font-size: 15px;">Spark</a> <a href="/tags/RDD/" style="font-size: 15px;">RDD</a> <a href="/tags/Shell脚本/" style="font-size: 15px;">Shell脚本</a> <a href="/tags/推荐系统/" style="font-size: 15px;">推荐系统</a> <a href="/tags/outputformat/" style="font-size: 15px;">outputformat</a> <a href="/tags/zookeeper/" style="font-size: 15px;">zookeeper</a></div></div><div class="widget"><div class="widget-title"><i class="fa fa-file-o"> 最新文章</i></div><ul class="post-list"><li class="post-list-item"><a class="post-list-link" href="/2016/06/21/sparksortby/">Spark1.6—自定义排序规则，对比Hadoop MR</a></li><li class="post-list-item"><a class="post-list-link" href="/2016/06/21/sparkgb/">Spark1.6—RDD广播变量</a></li><li class="post-list-item"><a class="post-list-link" href="/2016/06/21/sparkfqq/">Spark1.6—RDD自定义分区器Partitioner</a></li><li class="post-list-item"><a class="post-list-link" href="/2016/06/20/rdddx/">Spark1.6— RDD 根据电信基站数据计算用户常在地点</a></li><li class="post-list-item"><a class="post-list-link" href="/2016/06/18/scalayszh/">Scala—隐式转换实践</a></li><li class="post-list-item"><a class="post-list-link" href="/2016/06/18/scalayx/">Scala—-有序列表合并</a></li><li class="post-list-item"><a class="post-list-link" href="/2016/06/18/scalarpc/">Scala——利用Akka实现的RPC</a></li><li class="post-list-item"><a class="post-list-link" href="/2016/06/18/scalacurry/">Scala——使用Currry实现视图界定</a></li><li class="post-list-item"><a class="post-list-link" href="/2016/05/18/rizhijiankong2/">日志监控告警系统（二）</a></li><li class="post-list-item"><a class="post-list-link" href="/2016/05/17/rizhijiankong1/">日志监控告警系统（一）</a></li></ul></div><div class="widget"><div class="widget-title"><i class="fa fa-comment-o"> 最近评论</i></div><script type="text/javascript" src="//sparkliwei.disqus.com/recent_comments_widget.js?num_items=5&amp;hide_avatars=1&amp;avatar_size=32&amp;excerpt_length=20&amp;hide_mods=1"></script></div><div class="widget"><div class="widget-title"><i class="fa fa-external-link"> 友情链接</i></div><ul></ul><a href="http://spark8.tech/" title="spark8" target="_blank">spark8</a><ul></ul><a href="https://github.com/sparkLiwei" title="github" target="_blank">github</a></div></div></div><div class="pure-u-1 pure-u-md-3-4"><div id="footer">© <a href="/." rel="nofollow">Spark8.</a> Powered by<a rel="nofollow" target="_blank" href="https://hexo.io"> Hexo.</a><a rel="nofollow" target="_blank" href="https://github.com/tufu9441/maupassant-hexo"> Theme</a> by<a rel="nofollow" target="_blank" href="https://github.com/pagecho"> Cho.</a></div></div></div><a id="rocket" href="#top" class="show"></a><script type="text/javascript" src="/js/totop.js?v=0.0.1" async></script><script type="text/javascript" src="//cdn.bootcss.com/fancybox/2.1.5/jquery.fancybox.pack.js" async></script><script type="text/javascript" src="/js/fancybox.js?v=0.0.1" async></script><link rel="stylesheet" type="text/css" href="/css/jquery.fancybox.css?v=0.0.1"><script type="text/javascript" src="/js/search.js?v=0.0.1"></script><script>var search_path = 'search.xml';
+if (search_path.length == 0) {
+   search_path = 'search.xml';
+}
+var path = '/' + search_path;
+searchFunc(path, 'local-search-input', 'local-search-result');
+</script><script>(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+ga('create','UA-79665129-1','auto');ga('send','pageview');
+</script><script>var _hmt = _hmt || [];
+(function() {
+  var hm = document.createElement("script");
+  hm.src = "//hm.baidu.com/hm.js?561e14522c8f418b3f35a30cba92c642";
+  var s = document.getElementsByTagName("script")[0];
+  s.parentNode.insertBefore(hm, s);
+  var bp = document.createElement('script');
+  var curProtocol = window.location.protocol.split(':')[0];
+  if (curProtocol === 'https') {
+     bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';
+  }
+  else {
+     bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+  }
+  s.parentNode.insertBefore(bp, s);
+  })();
+</script><script type="text/javascript" src="/js/codeblock-resizer.js?v=0.0.1"></script><script type="text/javascript" src="/js/smartresize.js?v=0.0.1"></script></div></body></html>

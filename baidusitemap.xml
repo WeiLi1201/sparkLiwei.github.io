@@ -4,6 +4,72 @@
 
     
   <url>
+    <loc>http://spark8.tech/2016/06/21/sparksortby/</loc>
+    <lastmod>2016-07-06T13:12:58.000Z</lastmod>
+    <data>
+        <display>
+        <title>Spark1.6—自定义排序规则，对比Hadoop MR</title>
+        <pubTime>2016-06-21T13:15:12.000Z</pubTime>
+        
+        <tag>Spark</tag>
+         
+        <tag>RDD</tag>
+         
+         
+           
+             
+              <breadCrumb title="Spark" url="http://spark8.tech/categories/Spark/"/>
+          
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
+    <loc>http://spark8.tech/2016/06/21/sparkgb/</loc>
+    <lastmod>2016-07-06T13:07:08.000Z</lastmod>
+    <data>
+        <display>
+        <title>Spark1.6—RDD广播变量</title>
+        <pubTime>2016-06-21T13:15:12.000Z</pubTime>
+        
+        <tag>Spark</tag>
+         
+        <tag>RDD</tag>
+         
+         
+           
+             
+              <breadCrumb title="Spark" url="http://spark8.tech/categories/Spark/"/>
+          
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
+    <loc>http://spark8.tech/2016/06/21/sparkfqq/</loc>
+    <lastmod>2016-07-06T13:02:22.000Z</lastmod>
+    <data>
+        <display>
+        <title>Spark1.6—RDD自定义分区器Partitioner</title>
+        <pubTime>2016-06-21T13:15:12.000Z</pubTime>
+        
+        <tag>Spark</tag>
+         
+        <tag>RDD</tag>
+         
+         
+           
+             
+              <breadCrumb title="Spark" url="http://spark8.tech/categories/Spark/"/>
+          
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
     <loc>http://spark8.tech/2016/06/20/rdddx/</loc>
     <lastmod>2016-07-04T05:14:07.000Z</lastmod>
     <data>

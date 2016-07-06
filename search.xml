@@ -4,6 +4,270 @@
   
     
     <entry>
+      <title><![CDATA[Spark1.6—自定义排序规则，对比Hadoop MR]]></title>
+      <url>http://spark8.tech/2016/06/21/sparksortby/</url>
+      <content type="html"><![CDATA[<a id="more"></a>
+<h2 id="需求描述"><a href="#需求描述" class="headerlink" title="需求描述"></a>需求描述</h2><p>使用隐式转换，自定义排序规则</p>
+<h2 id="实现思路"><a href="#实现思路" class="headerlink" title="实现思路"></a>实现思路</h2><p>第一种方式：case class Girl 混入 Ordered<a href="#">Girl</a>接口，实现comapre方法，但是明显的高耦合<br>第二种方式：使用隐式转换，按sortBy要求 传入隐式值girlOrdering，实现解耦和自定义排序<br><img src="/images/sortby.png" alt=""></p>
+<h2 id="代码实现"><a href="#代码实现" class="headerlink" title="代码实现"></a>代码实现</h2><p>第一种方式：</p>
+<pre><code>object CustomSort {
+
+  def main(args: Array[String]) {
+    val conf = new SparkConf().setAppName(&quot;CustomSort&quot;).setMaster(&quot;local[2]&quot;)
+    val sc = new SparkContext(conf)
+    val rdd1 = sc.parallelize(List((&quot;yuihatano&quot;, 90, 28, 1), (&quot;angelababy&quot;, 90, 27, 2),(&quot;JuJingYi&quot;, 95, 22, 3)))
+    import OrderContext._
+    val rdd2 = rdd1.sortBy(x =&gt; Girl(x._2, x._3), false)
+    println(rdd2.collect().toBuffer)
+    sc.stop()
+  }
+
+}
+
+/**
+  * 第一种方式
+  * @param faceValue
+  * @param age
+*/
+case class Girl(val faceValue: Int, val age: Int) extends Ordered[Girl] with Serializable {
+  override def compare(that: Girl): Int = {
+    if(this.faceValue == that.faceValue) {
+      that.age - this.age
+    } else {
+      this.faceValue -that.faceValue
+    }
+  }
+}
+</code></pre><p>第二种方式：</p>
+<pre><code>case class Girl(faceValue: Int, age: Int) extends Serializable
+
+object OrderContext {
+  implicit val girlOrdering  = new Ordering[Girl] {
+    override def compare(x: Girl, y: Girl): Int = {
+      if(x.faceValue &gt; y.faceValue) 1
+      else if (x.faceValue == y.faceValue) {
+        if(x.age &gt; y.age) -1 else 1
+      } else -1
+    }
+  }
+}
+
+object CustomSort {
+
+  def main(args: Array[String]) {
+    val conf = new SparkConf().setAppName(&quot;CustomSort&quot;).setMaster(&quot;local[2]&quot;)
+    val sc = new SparkContext(conf)
+    val rdd1 = sc.parallelize(List((&quot;yuihatano&quot;, 90, 28, 1), (&quot;angelababy&quot;, 90, 27, 2),(&quot;JuJingYi&quot;, 95, 22, 3)))
+    import OrderContext._
+    val rdd2 = rdd1.sortBy(x =&gt; Girl(x._2, x._3), false)
+    println(rdd2.collect().toBuffer)
+    sc.stop()
+  }
+
+}
+</code></pre>]]></content>
+    </entry>
+    
+    <entry>
+      <title><![CDATA[Spark1.6—RDD广播变量]]></title>
+      <url>http://spark8.tech/2016/06/21/sparkgb/</url>
+      <content type="html"><![CDATA[<a id="more"></a>
+<h1 id="需求描述"><a href="#需求描述" class="headerlink" title="需求描述"></a>需求描述</h1><p>根据IP库，统计网站的IP来源，哪些区域比较集中，为广告投放市场做决策依据<br><img src="/images/iptxt.png" alt="ip.txt"><br><img src="/images/httpdata.png" alt="httpdata.log"></p>
+<h2 id="设计思路"><a href="#设计思路" class="headerlink" title="设计思路"></a>设计思路</h2><p>ip库数据量比较小，可将数据完整的广播到同属一个Application的Executor上，使RDD各分区在本地计算<br>1.new SparkContext<br>2.从ip库里面读取需要的字段startNum,endNum,province<br>3.collect先将信息返回至客户端,将ip库提取的信息广播到所有的Worker-Excutor<br>4.将请求信息映射为省份,通过二分查找求出请求信息在ip库的下标,返回(province,1)RDD<br>5.reduceByKey,并将数据foreachPartition存库</p>
+<h2 id="代码实现"><a href="#代码实现" class="headerlink" title="代码实现"></a>代码实现</h2><pre><code>object IPLocation {
+
+  val data2MySQL = (iterator: Iterator[(String, Int)]) =&gt; {
+    var conn: Connection = null
+    var ps : PreparedStatement = null
+    val sql = &quot;INSERT INTO location_info (location, counts, accesse_date) VALUES (?, ?, ?)&quot;
+    try {
+      conn = DriverManager.getConnection(&quot;jdbc:mysql://localhost:3307/test?useUnicode=true&amp;characterEncoding=UTF-8&quot;, &quot;root&quot;, &quot;hldw3101&quot;)
+      iterator.foreach(line =&gt; {
+        ps = conn.prepareStatement(sql)
+        ps.setString(1, line._1)
+        ps.setInt(2, line._2)
+        ps.setDate(3, new Date(System.currentTimeMillis()))
+        ps.executeUpdate()
+      })
+    } catch {
+      case e: Exception =&gt; println(e.printStackTrace())
+    } finally {
+      if (ps != null)
+        ps.close()
+      if (conn != null)
+        conn.close()
+    }
+  }
+
+  def ip2Long(ip: String): Long = {
+    val fragments = ip.split(&quot;[.]&quot;)
+    var ipNum = 0L
+    for (i &lt;- 0 until fragments.length){
+      ipNum =  fragments(i).toLong | ipNum &lt;&lt; 8L
+    }
+    ipNum
+  }
+
+  def binarySearch(lines: Array[(String, String, String)], ip: Long) : Int = {
+    var low = 0
+    var high = lines.length - 1
+    while (low &lt;= high) {
+      val middle = (low + high) / 2
+      if ((ip &gt;= lines(middle)._1.toLong) &amp;&amp; (ip &lt;= lines(middle)._2.toLong))
+        return middle
+      if (ip &lt; lines(middle)._1.toLong)
+        high = middle - 1
+      else {
+        low = middle + 1
+      }
+    }
+    -1
+  }
+
+  /**
+    * 数据要频繁的使用,但不会怎么经常变
+    * 广播变量的应用场景
+    * 1.new SparkContext
+    * 2.从ip库里面读取需要的字段startNum,endNum,province
+    * 3.collect先将信息返回至客户端,将ip库提取的信息广播到所有的Worker-Excutor
+    * 4.将请求信息映射为省份,通过二分查找求出请求信息在ip库的下标,返回(province,1)RDD
+    * 5.reduceByKey,并将数据foreachPartition存库
+    * @param args
+    */
+  def main(args: Array[String]) {
+
+    val conf = new SparkConf().setMaster(&quot;local[2]&quot;).setAppName(&quot;IpLocation&quot;)
+    val sc = new SparkContext(conf)
+
+    val ipConfs = sc.textFile(&quot;/Users/Variant/Desktop/ip.txt&quot;).map(line =&gt; {
+      val fields = line.split(&quot;\\|&quot;)
+      val startNum = fields(2)
+      val endNum = fields(3)
+      val province = fields(6)
+      (startNum, endNum, province)
+    }).collect()
+
+    //将数据广播到所有属于这个App的Executor上
+    //ipConfs分布在Worker Executor所在的机器上
+    //将ipConfs的数据返回到Driver,Driver再讲完整的数据广播到同属一个Application的Executor上
+    val broadcast: Broadcast[Array[(String, String, String)]] = sc.broadcast(ipConfs)
+
+    val provinceAndOne = sc.textFile(&quot;/Users/Variant/Desktop/httpdata.log&quot;).map(x =&gt; {
+      val fields = x.split(&quot;\\|&quot;)
+      val ip = fields(1)
+      val ipLong = ip2Long(ip)
+      val arr = broadcast.value
+      val index = binarySearch(arr, ipLong)
+      val province = arr(index)._3
+      (province, 1)
+    })
+
+    val provinceCount = provinceAndOne.reduceByKey(_+_)
+    //println(provinceCount.collect().toBuffer)
+    provinceCount.foreachPartition(data2MySQL)
+
+    sc.stop()
+
+  }
+}
+</code></pre>]]></content>
+    </entry>
+    
+    <entry>
+      <title><![CDATA[Spark1.6—RDD自定义分区器Partitioner]]></title>
+      <url>http://spark8.tech/2016/06/21/sparkfqq/</url>
+      <content type="html"><![CDATA[<a id="more"></a>
+<h1 id="需求描述"><a href="#需求描述" class="headerlink" title="需求描述"></a>需求描述</h1><p>统计网站子域名下点击url页面排名前三的点击次数</p>
+<h2 id="设计思路"><a href="#设计思路" class="headerlink" title="设计思路"></a>设计思路</h2><p>用之前scala中的思路是先groupBy再mapValues,在单机中没有问题但是在分布式系统中,groupBy意味着大量的网络通信,要极力避免。<br>默认的hashPartition会造成shuffle后的结果有的分区落的数据少、有的数据大，数据有倾斜，大量数据在某台机器或者某几台机器计算，容易拉长计算时间和内存溢出，所以可以考虑自定生成key，比如四个分区就将key设为(0,1,2,3)，但相对比较麻烦，自定义分区器，可以避免hash碰撞。<br>所以此处采用自定义分区器实现，有多少个子域名就分为多少个区，再通过mapPartition使得排序再本地进行，这样明显的会提高性能。<br>下面将分别列出两种方式代码</p>
+<h2 id="代码实现"><a href="#代码实现" class="headerlink" title="代码实现"></a>代码实现</h2><p>groupBy方式</p>
+<pre><code>object UrlCount3 {
+
+def main(args: Array[String]) {
+val conf = new SparkConf().setAppName(&quot;UrlCount3&quot;).setMaster(&quot;local&quot;)
+val sc = new SparkContext(conf)
+//read data
+val rdd1 = sc.textFile(&quot;/Users/Variant/Desktop/itcast.log&quot;).map(x =&gt; {
+  val fields = x.split(&quot;\t&quot;)
+  val time = fields(0)
+  val url = fields(1)
+  (url, 1)
+})
+
+val urlCounts: RDD[(String, Int)] = rdd1.reduceByKey(_ + _)
+
+//将数据缓存到内存(cache是一个 transformattion)
+//放到分布式系统中去考虑
+val cachedHosts: RDD[(String, (String, Int))] = urlCounts.map(x =&gt; {
+  val url = x._1
+  val host = new URL(url).getHost
+  val count = x._2
+  (host, (url, count))
+}).cache()
+
+/**
+  * 以下为第一种方式,也是常规的方式
+  * 先groupBy再mapValues,在单机中而言没有问题
+  * 但是在分布式系统中,groupby就意味着大量的网络通信,要极力避免
+  */
+val rdd3 = urlCounts.map(x =&gt; {
+  val url = x._1
+  val count = x._2
+  val host = new java.net.URL(url).getHost
+  (host, url, count)
+})
+
+val result = rdd3.groupBy(_._1).mapValues(_.toList.sortBy(_._3).reverse.take(3))
+result.saveAsTextFile(&quot;/Users/Variant/Desktop/result&quot;)
+}
+}
+</code></pre><p>分区器</p>
+<pre><code>object UrlCount3 {
+
+  def main(args: Array[String]) {
+val conf = new SparkConf().setAppName(&quot;UrlCount3&quot;).setMaster(&quot;local&quot;)
+val sc = new SparkContext(conf)
+//read data
+val rdd1 = sc.textFile(&quot;/Users/Variant/Desktop/itcast.log&quot;).map(x =&gt; {
+  val fields = x.split(&quot;\t&quot;)
+  val time = fields(0)
+  val url = fields(1)
+  (url, 1)
+})
+
+val urlCounts: RDD[(String, Int)] = rdd1.reduceByKey(_ + _)
+
+//将数据缓存到内存(cache是一个 transformattion)
+//放到分布式系统中去考虑
+val cachedHosts: RDD[(String, (String, Int))] = urlCounts.map(x =&gt; {
+  val url = x._1
+  val host = new URL(url).getHost
+  val count = x._2
+  (host, (url, count))
+}).cache()
+
+// action才能返回一个值,此处要用collect
+val disctHosts = cachedHosts.keys.distinct().collect()
+/**
+  * 第二种方式:自定义分区器(只能应用于K-V数据)
+  * 有的分区落的数据少、有的数据大，就会造成数据倾斜，大量数据跑到某台机器或者某几台机器，容易跑的很慢和内存溢出
+  * 默认是hashPartition，所以可以考虑自定生成key，比如四个分区就将key设为(0,1,2,3)
+  * 第二是自定义分区器，可以避免hash碰撞，mapPartition在本地排序
+  */
+val hostPartitioner = new HostPartitioner(disctHosts)
+val partitioned: RDD[(String, (String, Int))] = cachedHosts.partitionBy(hostPartitioner)
+
+val finalResult = partitioned.mapPartitions(it =&gt; {
+  it.toList.sortBy(_._2._2).reverse.take(3).iterator
+})
+
+finalResult.saveAsTextFile(&quot;/Users/Variant/Desktop/result&quot;)
+sc.stop()
+}
+}
+</code></pre>]]></content>
+    </entry>
+    
+    <entry>
       <title><![CDATA[Spark1.6— RDD 根据电信基站数据计算用户常在地点]]></title>
       <url>http://spark8.tech/2016/06/20/rdddx/</url>
       <content type="html"><![CDATA[<a id="more"></a>
@@ -139,6 +403,162 @@
     sc.stop()
   }
 
+}
+</code></pre>]]></content>
+    </entry>
+    
+    <entry>
+      <title><![CDATA[Scala—隐式转换实践]]></title>
+      <url>http://spark8.tech/2016/06/18/scalayszh/</url>
+      <content type="html"><![CDATA[<a id="more"></a>
+<p>业务以最简单的按字段compare为例。文章分为二个部分，第一种方式是没有用隐式转换的代码效果，第二种是用视图界定+隐式转换的代码效果，第三种是用上下文界定+隐式转换的代码效果</p>
+<h2 id="不用隐式转换"><a href="#不用隐式转换" class="headerlink" title="不用隐式转换"></a>不用隐式转换</h2><p>代码如下：     </p>
+<pre><code>class Girl(val name:String,var age :Int, val faceValue : Int = 99) extends Comparable[Girl]{
+  override def compareTo(o: Girl): Girl = {
+    ithis.faceValue - o.faceValue   
+  }
+}
+class ChooseMachine[T &lt;:Comparable[T]] {
+
+  def chooseGirl(a :T,b:T): T ={
+    if(a.compareTo(b) &gt; 0) a else b
+  }
+}
+object Girl{
+  def main(args: Array[String]) {
+val chooser = new ChooseMachine[Girl]
+val g1 = new Girl(&quot;tingting&quot;,18,85)
+val g2 = new Girl(&quot;angelaBaby&quot;,20,95)
+val choose = chooser.chooseGirl(g1,g2)
+println(choose.name)
+}
+</code></pre><p>第一种方式<br>1.这是最原始的方式,ChooseMichine对Girl进行排序,Girl需要继承并实现Comparable接口,并实现compareTo方法。ChooseMichine再在chooseGirl调用compareTo实现比较而得出结果<br>2.那么这样就存在两个问题<br> 一是排序的方式与类耦合在一起,如果我有Boy类需要按同样的方式比较,Boy类又要实现Comparable接口并实现compareTo方法<br> 二是同一类型多种排序方式无法共存?</p>
+<h2 id="用视图界定-隐式转换"><a href="#用视图界定-隐式转换" class="headerlink" title="用视图界定+隐式转换"></a>用视图界定+隐式转换</h2><p>代码如下：</p>
+<pre><code>class Girl(val name:String,var age :Int, val faceValue : Int = 99){
+
+}
+//T &lt;% Ordered[T] 视图界定,可以通过隐式转换实现
+class ChooseMachine[T &lt;% Ordered[T]] {
+  def chooseGirl(a :T,b:T): T ={
+    // T类型要有&gt;方法,就要拥有T =&gt; Ordered[T] 的函数或者方法
+    if(a &gt; b) a else b
+  }
+}
+object Spark8Predef {
+
+  implicit val girlToPredef = (girl : Girl)  =&gt; new Ordered[Girl]{
+      override def compare(that: Girl): Int = {
+        if (girl.faceValue == that.faceValue) {
+          that.age - girl.age
+        } else {
+          girl.faceValue - that.faceValue
+        }
+      }
+    }
+/*//用方法就这样写
+implicit def girlToPredef(girl : Girl) = new Ordered[Girl]{
+  override def compare(that: Girl): Int = {
+    if(girl.faceValue == that.faceValue) {
+      that.age - girl.age
+    } else {
+      girl.faceValue - that.faceValue
+    }
+  }
+}*/    
+}
+def main(args: Array[String]) {
+  import Spark8Predef._
+  val chooser = new ChooseMachine[Girl]
+  val g1 = new Girl(&quot;tingting&quot;, 18, 85)
+  val g2 = new Girl(&quot;angelaBaby&quot;, 20, 95)
+  val choose = chooser.chooseGirl(g1, g2)
+
+  println(choose.name)
+}
+</code></pre><p>第二种方式<br> 1.解决排序与类耦合,使用视图界定,将T类型转换为Ordered[T]类型,<br>  这样就可以实现用不同的类进行比较，new MissRight[Girl],可以换成new MissRight[Boy]<br> 2.二是各种类的比较规则不会和类耦合在一起，只需要在不同程序导入不同的隐式转换就可以实现程序的灵活性。girlToOrdered  也可以写成 boyToOrdered<br> 3.使用T &lt;% Ordered[T] 需要隐式地传入一个T => Ordered<a href="#">T</a>的方法</p>
+<h2 id="用上下文界定-隐式转换"><a href="#用上下文界定-隐式转换" class="headerlink" title="用上下文界定+隐式转换"></a>用上下文界定+隐式转换</h2><p>代码如下</p>
+<pre><code>class Girl(val name:String,var age :Int, val faceValue : Int = 99){
+
+}
+//一个冒号  是Context bound  他需要一个隐式转换的值
+class ChooseMachine [T : Ordering] {
+  def select(first: T, scecond: T): T = {
+    val ord = implicitly[Ordering[T]]
+    if(ord.gt(first, scecond)) first else scecond
+  }
+}
+object Spark8Predef {
+
+/**
+  *用Ordering[T] 代替Ordered,此处隐式的传入一个 Ordering[T]对象
+  */
+implicit object orderingGril extends Ordering[Girl] {
+  override def compare(x: Girl, y: Girl): Int = {
+
+    if (x.faceValue == y.faceValue) {
+      y.age - x.age
+    } else {
+      x.faceValue - y.faceValue
+    }
+  }
+}
+}
+
+object ChooseMachine {
+  def main(args: Array[String]) {
+    import Spark8Predef._
+    val chooser = new ChooseMachine[Girl]
+    val g1 = new Girl(&quot;tingting&quot;, 18, 85)
+    val g2 = new Girl(&quot;angelaBaby&quot;, 20, 95)
+    val choose = chooser.chooseGirl(g1, g2)
+
+    println(choose.name)
+  }
+}
+</code></pre><p>第三种方式与第二种方式实现的效果一样，即类与排序类型的耦合以及类与排序规则的耦合，只是 implicitly[Ordering[T]] 要主动引入</p>
+]]></content>
+    </entry>
+    
+    <entry>
+      <title><![CDATA[Scala—-有序列表合并]]></title>
+      <url>http://spark8.tech/2016/06/18/scalayx/</url>
+      <content type="html"><![CDATA[<a id="more"></a>
+<p>算法本身并不复杂，但是要注意的是递归一定要显式的声明返回值类型。</p>
+<pre><code>  object SortList {
+
+  def main(args: Array[String]) {
+
+    //合并算法
+    def mergedsort[T] (less: (T,T) =&gt; Boolean)(input : List[T]):List[T] = {
+      /**
+       * @param  xlist 要合并的有序列表
+       * @param  ylist 要合并的有序列表
+       * @return 合并后的列表
+       */
+      def merge(xlist: List[T], ylist: List[T]): List[T] = {
+        (xlist,ylist) match{
+          case (Nil,_) =&gt; ylist
+          case (_,Nil) =&gt; xlist
+          case (x :: xtail,y :: ytail) =&gt;
+            if(less(x,y))  x :: merge(xtail,ylist)
+            else y :: merge(xlist,ytail)
+        }
+      }
+      val n =input.length / 2
+      if(n == 0) input
+      else{
+        val (x,y) =input splitAt n
+        merge(mergedsort(less)(x), mergedsort(less)(y))
+
+      }
+    }
+
+    println(mergedsort((x : Int,y :Int) =&gt; x &lt; y) (List(1,5,4,7,235,333,43,2,6)))
+
+    val reverse_SortList = mergedsort((x:Int,y:Int) =&gt; x &gt; y ) _
+    println(reverse_SortList(List(1,5,4,7,235,333,43,2,6)))
+
+  }
 }
 </code></pre>]]></content>
     </entry>
@@ -387,162 +807,6 @@ object ChooseMachine {
 }
 </code></pre><p>其实整个代码还是蛮简单的，就是用ChooseMachine的泛型，泛型参数不是视图界定，那么就在ChooseMachine的具体方法上实现柯里化，然后在导入Spark8Predef里面的隐式转换方法，就OK啦。</p>
 ]]></content>
-    </entry>
-    
-    <entry>
-      <title><![CDATA[Scala—隐式转换实践]]></title>
-      <url>http://spark8.tech/2016/06/18/scalayszh/</url>
-      <content type="html"><![CDATA[<a id="more"></a>
-<p>业务以最简单的按字段compare为例。文章分为二个部分，第一种方式是没有用隐式转换的代码效果，第二种是用视图界定+隐式转换的代码效果，第三种是用上下文界定+隐式转换的代码效果</p>
-<h2 id="不用隐式转换"><a href="#不用隐式转换" class="headerlink" title="不用隐式转换"></a>不用隐式转换</h2><p>代码如下：     </p>
-<pre><code>class Girl(val name:String,var age :Int, val faceValue : Int = 99) extends Comparable[Girl]{
-  override def compareTo(o: Girl): Girl = {
-    ithis.faceValue - o.faceValue   
-  }
-}
-class ChooseMachine[T &lt;:Comparable[T]] {
-
-  def chooseGirl(a :T,b:T): T ={
-    if(a.compareTo(b) &gt; 0) a else b
-  }
-}
-object Girl{
-  def main(args: Array[String]) {
-val chooser = new ChooseMachine[Girl]
-val g1 = new Girl(&quot;tingting&quot;,18,85)
-val g2 = new Girl(&quot;angelaBaby&quot;,20,95)
-val choose = chooser.chooseGirl(g1,g2)
-println(choose.name)
-}
-</code></pre><p>第一种方式<br>1.这是最原始的方式,ChooseMichine对Girl进行排序,Girl需要继承并实现Comparable接口,并实现compareTo方法。ChooseMichine再在chooseGirl调用compareTo实现比较而得出结果<br>2.那么这样就存在两个问题<br> 一是排序的方式与类耦合在一起,如果我有Boy类需要按同样的方式比较,Boy类又要实现Comparable接口并实现compareTo方法<br> 二是同一类型多种排序方式无法共存?</p>
-<h2 id="用视图界定-隐式转换"><a href="#用视图界定-隐式转换" class="headerlink" title="用视图界定+隐式转换"></a>用视图界定+隐式转换</h2><p>代码如下：</p>
-<pre><code>class Girl(val name:String,var age :Int, val faceValue : Int = 99){
-
-}
-//T &lt;% Ordered[T] 视图界定,可以通过隐式转换实现
-class ChooseMachine[T &lt;% Ordered[T]] {
-  def chooseGirl(a :T,b:T): T ={
-    // T类型要有&gt;方法,就要拥有T =&gt; Ordered[T] 的函数或者方法
-    if(a &gt; b) a else b
-  }
-}
-object Spark8Predef {
-
-  implicit val girlToPredef = (girl : Girl)  =&gt; new Ordered[Girl]{
-      override def compare(that: Girl): Int = {
-        if (girl.faceValue == that.faceValue) {
-          that.age - girl.age
-        } else {
-          girl.faceValue - that.faceValue
-        }
-      }
-    }
-/*//用方法就这样写
-implicit def girlToPredef(girl : Girl) = new Ordered[Girl]{
-  override def compare(that: Girl): Int = {
-    if(girl.faceValue == that.faceValue) {
-      that.age - girl.age
-    } else {
-      girl.faceValue - that.faceValue
-    }
-  }
-}*/    
-}
-def main(args: Array[String]) {
-  import Spark8Predef._
-  val chooser = new ChooseMachine[Girl]
-  val g1 = new Girl(&quot;tingting&quot;, 18, 85)
-  val g2 = new Girl(&quot;angelaBaby&quot;, 20, 95)
-  val choose = chooser.chooseGirl(g1, g2)
-
-  println(choose.name)
-}
-</code></pre><p>第二种方式<br> 1.解决排序与类耦合,使用视图界定,将T类型转换为Ordered[T]类型,<br>  这样就可以实现用不同的类进行比较，new MissRight[Girl],可以换成new MissRight[Boy]<br> 2.二是各种类的比较规则不会和类耦合在一起，只需要在不同程序导入不同的隐式转换就可以实现程序的灵活性。girlToOrdered  也可以写成 boyToOrdered<br> 3.使用T &lt;% Ordered[T] 需要隐式地传入一个T => Ordered<a href="#">T</a>的方法</p>
-<h2 id="用上下文界定-隐式转换"><a href="#用上下文界定-隐式转换" class="headerlink" title="用上下文界定+隐式转换"></a>用上下文界定+隐式转换</h2><p>代码如下</p>
-<pre><code>class Girl(val name:String,var age :Int, val faceValue : Int = 99){
-
-}
-//一个冒号  是Context bound  他需要一个隐式转换的值
-class ChooseMachine [T : Ordering] {
-  def select(first: T, scecond: T): T = {
-    val ord = implicitly[Ordering[T]]
-    if(ord.gt(first, scecond)) first else scecond
-  }
-}
-object Spark8Predef {
-
-/**
-  *用Ordering[T] 代替Ordered,此处隐式的传入一个 Ordering[T]对象
-  */
-implicit object orderingGril extends Ordering[Girl] {
-  override def compare(x: Girl, y: Girl): Int = {
-
-    if (x.faceValue == y.faceValue) {
-      y.age - x.age
-    } else {
-      x.faceValue - y.faceValue
-    }
-  }
-}
-}
-
-object ChooseMachine {
-  def main(args: Array[String]) {
-    import Spark8Predef._
-    val chooser = new ChooseMachine[Girl]
-    val g1 = new Girl(&quot;tingting&quot;, 18, 85)
-    val g2 = new Girl(&quot;angelaBaby&quot;, 20, 95)
-    val choose = chooser.chooseGirl(g1, g2)
-
-    println(choose.name)
-  }
-}
-</code></pre><p>第三种方式与第二种方式实现的效果一样，即类与排序类型的耦合以及类与排序规则的耦合，只是 implicitly[Ordering[T]] 要主动引入</p>
-]]></content>
-    </entry>
-    
-    <entry>
-      <title><![CDATA[Scala—-有序列表合并]]></title>
-      <url>http://spark8.tech/2016/06/18/scalayx/</url>
-      <content type="html"><![CDATA[<a id="more"></a>
-<p>算法本身并不复杂，但是要注意的是递归一定要显式的声明返回值类型。</p>
-<pre><code>  object SortList {
-
-  def main(args: Array[String]) {
-
-    //合并算法
-    def mergedsort[T] (less: (T,T) =&gt; Boolean)(input : List[T]):List[T] = {
-      /**
-       * @param  xlist 要合并的有序列表
-       * @param  ylist 要合并的有序列表
-       * @return 合并后的列表
-       */
-      def merge(xlist: List[T], ylist: List[T]): List[T] = {
-        (xlist,ylist) match{
-          case (Nil,_) =&gt; ylist
-          case (_,Nil) =&gt; xlist
-          case (x :: xtail,y :: ytail) =&gt;
-            if(less(x,y))  x :: merge(xtail,ylist)
-            else y :: merge(xlist,ytail)
-        }
-      }
-      val n =input.length / 2
-      if(n == 0) input
-      else{
-        val (x,y) =input splitAt n
-        merge(mergedsort(less)(x), mergedsort(less)(y))
-
-      }
-    }
-
-    println(mergedsort((x : Int,y :Int) =&gt; x &lt; y) (List(1,5,4,7,235,333,43,2,6)))
-
-    val reverse_SortList = mergedsort((x:Int,y:Int) =&gt; x &gt; y ) _
-    println(reverse_SortList(List(1,5,4,7,235,333,43,2,6)))
-
-  }
-}
-</code></pre>]]></content>
     </entry>
     
     <entry>
