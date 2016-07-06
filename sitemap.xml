@@ -2,6 +2,55 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   
   <url>
+    <loc>http://spark8.tech/2016/06/22/groupingCompa/</loc>
+    
+    <lastmod>2016-07-06T13:21:11.000Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://spark8.tech/2016/06/22/gongtonghaoyou/</loc>
+    
+    <lastmod>2016-07-06T13:20:44.000Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://spark8.tech/2016/06/22/daopaisuoyin/</loc>
+    
+    <lastmod>2016-07-06T13:20:20.000Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://spark8.tech/2016/06/22/zidingyiot/</loc>
+    
+    <lastmod>2016-07-06T13:19:42.000Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://spark8.tech/2016/06/22/fbshchadoop/</loc>
+    
+    <lastmod>2016-07-06T13:19:01.000Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://spark8.tech/2016/06/22/hadoopzlj/</loc>
+    
+    <lastmod>2016-07-06T13:18:33.000Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://spark8.tech/2016/06/22/hadoopha/</loc>
+    
+    <lastmod>2016-07-06T13:18:09.000Z</lastmod>
+    
+  </url>
+  
+  <url>
     <loc>http://spark8.tech/2016/06/21/sparksortby/</loc>
     
     <lastmod>2016-07-06T13:12:58.000Z</lastmod>
@@ -26,34 +75,6 @@
     <loc>http://spark8.tech/2016/06/20/rdddx/</loc>
     
     <lastmod>2016-07-04T05:14:07.000Z</lastmod>
-    
-  </url>
-  
-  <url>
-    <loc>http://spark8.tech/2015/10/09/zidingyiot/</loc>
-    
-    <lastmod>2016-07-03T12:43:52.000Z</lastmod>
-    
-  </url>
-  
-  <url>
-    <loc>http://spark8.tech/2015/10/10/daopaisuoyin/</loc>
-    
-    <lastmod>2016-07-03T12:42:59.000Z</lastmod>
-    
-  </url>
-  
-  <url>
-    <loc>http://spark8.tech/2015/10/12/gongtonghaoyou/</loc>
-    
-    <lastmod>2016-07-03T12:41:49.000Z</lastmod>
-    
-  </url>
-  
-  <url>
-    <loc>http://spark8.tech/2015/10/13/groupingCompa/</loc>
-    
-    <lastmod>2016-07-03T12:41:14.000Z</lastmod>
     
   </url>
   
@@ -96,13 +117,6 @@
     <loc>http://spark8.tech/2015/11/11/hdfs/</loc>
     
     <lastmod>2016-07-03T12:33:44.000Z</lastmod>
-    
-  </url>
-  
-  <url>
-    <loc>http://spark8.tech/2015/11/14/hadoopha/</loc>
-    
-    <lastmod>2016-07-03T12:28:52.000Z</lastmod>
     
   </url>
   
@@ -187,20 +201,6 @@
     <loc>http://spark8.tech/2015/10/14/mrziyuanyouhua/</loc>
     
     <lastmod>2016-06-25T10:51:59.000Z</lastmod>
-    
-  </url>
-  
-  <url>
-    <loc>http://spark8.tech/2015/10/08/fbshchadoop/</loc>
-    
-    <lastmod>2016-06-25T09:49:38.000Z</lastmod>
-    
-  </url>
-  
-  <url>
-    <loc>http://spark8.tech/2015/10/07/hadoopzlj/</loc>
-    
-    <lastmod>2016-06-25T09:42:30.000Z</lastmod>
     
   </url>
   

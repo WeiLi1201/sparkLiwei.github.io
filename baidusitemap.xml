@@ -4,6 +4,152 @@
 
     
   <url>
+    <loc>http://spark8.tech/2016/06/22/groupingCompa/</loc>
+    <lastmod>2016-07-06T13:21:11.000Z</lastmod>
+    <data>
+        <display>
+        <title>Hadoop2.x——自定义GroupingComparator分组取Top1</title>
+        <pubTime>2016-06-22T04:12:12.000Z</pubTime>
+        
+        <tag>hadoop</tag>
+         
+         
+           
+             
+              <breadCrumb title="hadoop" url="http://spark8.tech/categories/hadoop/"/>
+          
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
+    <loc>http://spark8.tech/2016/06/22/gongtonghaoyou/</loc>
+    <lastmod>2016-07-06T13:20:44.000Z</lastmod>
+    <data>
+        <display>
+        <title>Hadoop2.x——共同好友问题</title>
+        <pubTime>2016-06-22T15:12:12.000Z</pubTime>
+        
+        <tag>hadoop</tag>
+         
+        <tag>MR</tag>
+         
+         
+           
+             
+              <breadCrumb title="hadoop" url="http://spark8.tech/categories/hadoop/"/>
+          
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
+    <loc>http://spark8.tech/2016/06/22/daopaisuoyin/</loc>
+    <lastmod>2016-07-06T13:20:20.000Z</lastmod>
+    <data>
+        <display>
+        <title>Hadoop2.x——倒排索引</title>
+        <pubTime>2016-06-22T15:12:12.000Z</pubTime>
+        
+        <tag>hadoop</tag>
+         
+         
+           
+             
+              <breadCrumb title="hadoop" url="http://spark8.tech/categories/hadoop/"/>
+          
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
+    <loc>http://spark8.tech/2016/06/22/zidingyiot/</loc>
+    <lastmod>2016-07-06T13:19:42.000Z</lastmod>
+    <data>
+        <display>
+        <title>Hadoop2.x——自定义输出格式重写outputformat</title>
+        <pubTime>2016-06-22T15:12:12.000Z</pubTime>
+        
+        <tag>hadoop</tag>
+         
+        <tag>outputformat</tag>
+         
+         
+           
+             
+              <breadCrumb title="hadoop" url="http://spark8.tech/categories/hadoop/"/>
+          
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
+    <loc>http://spark8.tech/2016/06/22/fbshchadoop/</loc>
+    <lastmod>2016-07-06T13:19:01.000Z</lastmod>
+    <data>
+        <display>
+        <title>Hadoop2.x——分布式缓存(解决数据倾斜问题)</title>
+        <pubTime>2016-06-22T05:12:12.000Z</pubTime>
+        
+        <tag>hadoop</tag>
+         
+         
+           
+             
+              <breadCrumb title="hadoop" url="http://spark8.tech/categories/hadoop/"/>
+          
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
+    <loc>http://spark8.tech/2016/06/22/hadoopzlj/</loc>
+    <lastmod>2016-07-06T13:18:33.000Z</lastmod>
+    <data>
+        <display>
+        <title>Hadoop2.x——左连接</title>
+        <pubTime>2016-06-22T15:12:12.000Z</pubTime>
+        
+        <tag>hadoop</tag>
+         
+         
+           
+             
+              <breadCrumb title="hadoop" url="http://spark8.tech/categories/hadoop/"/>
+          
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
+    <loc>http://spark8.tech/2016/06/22/hadoopha/</loc>
+    <lastmod>2016-07-06T13:18:09.000Z</lastmod>
+    <data>
+        <display>
+        <title>Hadoop2.x——实现HA</title>
+        <pubTime>2016-06-22T15:12:12.000Z</pubTime>
+        
+        <tag>hadoop</tag>
+         
+        <tag>HA</tag>
+         
+         
+           
+             
+              <breadCrumb title="hadoop" url="http://spark8.tech/categories/hadoop/"/>
+          
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
     <loc>http://spark8.tech/2016/06/21/sparksortby/</loc>
     <lastmod>2016-07-06T13:12:58.000Z</lastmod>
     <data>
@@ -85,90 +231,6 @@
            
              
               <breadCrumb title="Spark" url="http://spark8.tech/categories/Spark/"/>
-          
-        </display>
-    </data>
-    </url>
-
-    
-  <url>
-    <loc>http://spark8.tech/2015/10/09/zidingyiot/</loc>
-    <lastmod>2016-07-03T12:43:52.000Z</lastmod>
-    <data>
-        <display>
-        <title>Hadoop2.x——自定义输出格式重写outputformat</title>
-        <pubTime>2015-10-09T15:12:12.000Z</pubTime>
-        
-        <tag>hadoop</tag>
-         
-        <tag>outputformat</tag>
-         
-         
-           
-             
-              <breadCrumb title="hadoop" url="http://spark8.tech/categories/hadoop/"/>
-          
-        </display>
-    </data>
-    </url>
-
-    
-  <url>
-    <loc>http://spark8.tech/2015/10/10/daopaisuoyin/</loc>
-    <lastmod>2016-07-03T12:42:59.000Z</lastmod>
-    <data>
-        <display>
-        <title>Hadoop2.x——倒排索引</title>
-        <pubTime>2015-10-10T15:12:12.000Z</pubTime>
-        
-        <tag>hadoop</tag>
-         
-         
-           
-             
-              <breadCrumb title="hadoop" url="http://spark8.tech/categories/hadoop/"/>
-          
-        </display>
-    </data>
-    </url>
-
-    
-  <url>
-    <loc>http://spark8.tech/2015/10/12/gongtonghaoyou/</loc>
-    <lastmod>2016-07-03T12:41:49.000Z</lastmod>
-    <data>
-        <display>
-        <title>Hadoop2.x——共同好友问题</title>
-        <pubTime>2015-10-12T15:12:12.000Z</pubTime>
-        
-        <tag>hadoop</tag>
-         
-        <tag>MR</tag>
-         
-         
-           
-             
-              <breadCrumb title="hadoop" url="http://spark8.tech/categories/hadoop/"/>
-          
-        </display>
-    </data>
-    </url>
-
-    
-  <url>
-    <loc>http://spark8.tech/2015/10/13/groupingCompa/</loc>
-    <lastmod>2016-07-03T12:41:14.000Z</lastmod>
-    <data>
-        <display>
-        <title>Hadoop2.x——自定义GroupingComparator分组取Top1</title>
-        <pubTime>2015-10-13T04:12:12.000Z</pubTime>
-        
-        <tag>hadoop</tag>
-         
-         
-           
-             
-              <breadCrumb title="hadoop" url="http://spark8.tech/categories/hadoop/"/>
           
         </display>
     </data>
@@ -308,28 +370,6 @@
 
     
   <url>
-    <loc>http://spark8.tech/2015/11/14/hadoopha/</loc>
-    <lastmod>2016-07-03T12:28:52.000Z</lastmod>
-    <data>
-        <display>
-        <title>Hadoop2.x——实现HA</title>
-        <pubTime>2015-11-14T15:12:12.000Z</pubTime>
-        
-        <tag>hadoop</tag>
-         
-        <tag>HA</tag>
-         
-         
-           
-             
-              <breadCrumb title="hadoop" url="http://spark8.tech/categories/hadoop/"/>
-          
-        </display>
-    </data>
-    </url>
-
-    
-  <url>
     <loc>http://spark8.tech/2016/03/11/zkfbss/</loc>
     <lastmod>2016-07-03T12:26:14.000Z</lastmod>
     <data>
@@ -441,9 +481,9 @@
         <title>日志监控告警系统（一）</title>
         <pubTime>2016-05-17T15:25:22.000Z</pubTime>
         
-        <tag>kafka</tag>
-         
         <tag>storm</tag>
+         
+        <tag>kafka</tag>
          
         <tag>mysql</tag>
          
@@ -582,46 +622,6 @@
 
     
   <url>
-    <loc>http://spark8.tech/2015/10/08/fbshchadoop/</loc>
-    <lastmod>2016-06-25T09:49:38.000Z</lastmod>
-    <data>
-        <display>
-        <title>Hadoop2.x——分布式缓存(解决数据倾斜问题)</title>
-        <pubTime>2015-10-08T05:12:12.000Z</pubTime>
-        
-        <tag>hadoop</tag>
-         
-         
-           
-             
-              <breadCrumb title="hadoop" url="http://spark8.tech/categories/hadoop/"/>
-          
-        </display>
-    </data>
-    </url>
-
-    
-  <url>
-    <loc>http://spark8.tech/2015/10/07/hadoopzlj/</loc>
-    <lastmod>2016-06-25T09:42:30.000Z</lastmod>
-    <data>
-        <display>
-        <title>Hadoop2.x——左连接</title>
-        <pubTime>2015-10-07T15:12:12.000Z</pubTime>
-        
-        <tag>hadoop</tag>
-         
-         
-           
-             
-              <breadCrumb title="hadoop" url="http://spark8.tech/categories/hadoop/"/>
-          
-        </display>
-    </data>
-    </url>
-
-    
-  <url>
     <loc>http://spark8.tech/2016/03/11/zkyuanli/</loc>
     <lastmod>2016-06-24T16:33:03.000Z</lastmod>
     <data>
@@ -693,9 +693,9 @@
         
         <tag>flume</tag>
          
-        <tag>kafka</tag>
-         
         <tag>storm</tag>
+         
+        <tag>kafka</tag>
          
          
            
