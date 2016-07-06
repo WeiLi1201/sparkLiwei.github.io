@@ -4,6 +4,50 @@
 
     
   <url>
+    <loc>http://spark8.tech/2016/06/22/mapreduce/</loc>
+    <lastmod>2016-07-06T13:25:38.000Z</lastmod>
+    <data>
+        <display>
+        <title>Hadoop2.x——MR并行计算框架结构及核心运行机制</title>
+        <pubTime>2016-06-22T14:15:12.000Z</pubTime>
+        
+        <tag>hadoop</tag>
+         
+        <tag>MapReduce</tag>
+         
+         
+           
+             
+              <breadCrumb title="hadoop" url="http://spark8.tech/categories/hadoop/"/>
+          
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
+    <loc>http://spark8.tech/2016/06/22/mrziyuanyouhua/</loc>
+    <lastmod>2016-07-06T13:24:42.000Z</lastmod>
+    <data>
+        <display>
+        <title>Hadoop2.x——MR参数优化</title>
+        <pubTime>2016-06-22T04:12:12.000Z</pubTime>
+        
+        <tag>hadoop</tag>
+         
+        <tag>map reduce</tag>
+         
+         
+           
+             
+              <breadCrumb title="hadoop" url="http://spark8.tech/categories/hadoop/"/>
+          
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
     <loc>http://spark8.tech/2016/06/22/groupingCompa/</loc>
     <lastmod>2016-07-06T13:21:11.000Z</lastmod>
     <data>
@@ -326,28 +370,6 @@
 
     
   <url>
-    <loc>http://spark8.tech/2015/11/10/mapreduce/</loc>
-    <lastmod>2016-07-03T12:34:18.000Z</lastmod>
-    <data>
-        <display>
-        <title>Hadoop2.x——MR并行计算框架结构及核心运行机制</title>
-        <pubTime>2015-11-10T14:15:12.000Z</pubTime>
-        
-        <tag>hadoop</tag>
-         
-        <tag>MapReduce</tag>
-         
-         
-           
-             
-              <breadCrumb title="hadoop" url="http://spark8.tech/categories/hadoop/"/>
-          
-        </display>
-    </data>
-    </url>
-
-    
-  <url>
     <loc>http://spark8.tech/2015/11/11/hdfs/</loc>
     <lastmod>2016-07-03T12:33:44.000Z</lastmod>
     <data>
@@ -588,28 +610,6 @@
         <tag>hadoop</tag>
          
         <tag>hive</tag>
-         
-         
-           
-             
-              <breadCrumb title="hadoop" url="http://spark8.tech/categories/hadoop/"/>
-          
-        </display>
-    </data>
-    </url>
-
-    
-  <url>
-    <loc>http://spark8.tech/2015/10/14/mrziyuanyouhua/</loc>
-    <lastmod>2016-06-25T10:51:59.000Z</lastmod>
-    <data>
-        <display>
-        <title>Hadoop2.x——MR参数优化</title>
-        <pubTime>2015-10-14T04:12:12.000Z</pubTime>
-        
-        <tag>hadoop</tag>
-         
-        <tag>map reduce</tag>
          
          
            

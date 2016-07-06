@@ -23,127 +23,6 @@
     </entry>
     
     <entry>
-      <title><![CDATA[Hadoop2.x——倒排索引]]></title>
-      <url>http://spark8.tech/2016/06/22/daopaisuoyin/</url>
-      <content type="html"><![CDATA[<a id="more"></a>
-<h2 id="需求描述"><a href="#需求描述" class="headerlink" title="需求描述"></a>需求描述</h2><p>文档中找单词，当文档数越来越多时，直接打开文档找单词不靠谱(一个一个文档找比较慢)。<br>倒排索引：将单词出现在文档中的位置，记录下来。<br>如：a  -&gt;  1.txt,11.txt,56.txt</p>
-<h2 id="设计思路"><a href="#设计思路" class="headerlink" title="设计思路"></a>设计思路</h2><p>1、计算某个单词出现在一个文档中的次数<br>MR1阶段</p>
-<blockquote>
-<p> 单词     文档名称 次数<br>  分词器 IK<br>  获取文件名 inputSplit<br>  我和我的祖国 一刻也不能分割<br>  我<br>  我的祖国<br>  祖国<br>  ……<br>Map ：<br>KEYOUT: 我:文档名称<br> VALUEOUT: 1<br>SHUFFLE:<br>我:文档名称  Iterable1,1,1,1,1,1,1,1<br>Reduce：<br>我:文档名称 8<br>KEYOUT: 我<br>VALUEOUT： 文档名称 8</p>
-</blockquote>
-<p>2、计算一个单词出现在所有文档中的次数<br>MR2阶段</p>
-<blockquote>
-<p>MAP<br>KEYIN:我<br>VALUEIN:文档名称 8<br>SHUFFLE:<br>我:  Iterable[“文档名称1 8”,”文档名称2 18”]<br>Reduce：<br>KEYOUT:我<br>VALUEOUT：权重值 ，总出现次数，“文档名称1 8”，“文档名称2 18”</p>
-<h2 id="代码开发"><a href="#代码开发" class="headerlink" title="代码开发"></a>代码开发</h2><p>源码请参见<a href="www.baidu.com">github链接</a><br>1.驱动类</p>
-</blockquote>
-<pre><code>public class IndexJob {
-public static void main(String[] args) throws Exception {
-    String map1inputpath = &quot;&quot;;
-    String reduce1outputmap2inputpath = &quot;&quot;;
-    String respath = &quot;&quot;;
-
-    //第一个job
-    Job job = Job.getInstance();
-
-    job.setMapperClass(IndexMap1.class);
-    job.setMapOutputKeyClass(Text.class);
-    job.setMapOutputValueClass(IntWritable.class);
-
-    job.setReducerClass(IndexReduce1.class);
-    job.setOutputKeyClass(Text.class);
-    job.setOutputValueClass(Text.class);
-
-    job.setNumReduceTasks(2);
-
-    FileInputFormat.setInputPaths(job,new Path(&quot;/&quot;));
-    FileOutputFormat.setOutputPath(job, new Path(&quot;/&quot;));
-
-    if(job.waitForCompletion(true)){
-        //第二个job
-        //可不可以公用一个job
-        job.setMapperClass(IndexMap2.class);
-        job.setMapOutputKeyClass(Text.class);
-        job.setMapOutputValueClass(Text.class);
-
-        job.setReducerClass(IndexReduce2.class);
-        job.setOutputKeyClass(Text.class);
-        job.setOutputValueClass(Text.class);
-
-        job.setNumReduceTasks(2);
-
-        FileInputFormat.setInputPaths(job,new Path(&quot;/&quot;));
-        FileOutputFormat.setOutputPath(job, new Path(&quot;/&quot;));
-
-        job.waitForCompletion(true);
-    }
-}
-}
-</code></pre><p>2.IndexMap1类</p>
-<pre><code>public class IndexMap1 extends Mapper&lt;LongWritable,Text,Text,IntWritable&gt; {
-
-@Override
-protected void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
-    byte[] bytes = value.getBytes();
-
-    //2、对数据进行分词
-    InputStream inputStream = new ByteArrayInputStream(bytes);
-    Reader reader = new InputStreamReader(inputStream);
-    IKSegmenter ikSegmenter = new IKSegmenter(reader, true);
-
-    //获得文档名称
-    FileSplit inputSplit = (FileSplit) context.getInputSplit();
-    String fileName  = inputSplit.getPath().getName();
-
-    //4、map端词条出现次数统计
-    Lexeme t;
-    while ((t = ikSegmenter.next()) != null) {
-        context.write(new Text(t.getLexemeText()+&quot;:&quot;+fileName),new IntWritable(1));
-    }
-}
-}
-</code></pre><p>3.Index2Reduce1类</p>
-<pre><code>public class IndexReduce1 extends Reducer&lt;Text,IntWritable,Text,Text&gt; {
-
-@Override
-protected void reduce(Text key, Iterable&lt;IntWritable&gt; values, Context context) throws IOException, InterruptedException {
-    Integer sum=0;
-    for(IntWritable count:values){
-        sum+=count.get();
-    }
-    String[] arrStr = key.toString().split(&quot;:&quot;);
-    key.set(arrStr[0]);
-    context.write(key,new Text(arrStr[1]+&quot;:&quot;+sum));
-}
-}
-</code></pre><p>4.IndexMap2类</p>
-<pre><code>public class IndexMap2 extends Mapper&lt;Text,LongWritable,Text,Text&gt; {
-
-@Override
-protected void map(Text key, LongWritable value, Context context) throws IOException, InterruptedException {
-    String[] arrStr = value.toString().split(&quot; &quot;);
-    context.write(new Text(arrStr[0]),new Text(arrStr[1]));
-}
-}
-</code></pre><p>5.IndexReduce2类</p>
-<pre><code>public class IndexReduce2 extends Reducer&lt;Text,Text,Text,Text&gt; {
-
-@Override
-protected void reduce(Text key, Iterable&lt;Text&gt; values, Context context) throws IOException, InterruptedException {
-    int sum =0;
-    StringBuffer sb = new StringBuffer();
-    for(Text txt:values){
-        sb.append(txt);
-        sb.append(&quot;,&quot;);
-        String[] arrStr = values.toString().split(&quot;:&quot;);
-        sum += Integer.parseInt(arrStr[1]);
-    }
-    context.write(key,new Text(sum + &quot;&quot; + &quot;\t&quot; + sb.toString()));
-}
-}
-</code></pre>]]></content>
-    </entry>
-    
-    <entry>
       <title><![CDATA[Hadoop2.x——自定义输出格式重写outputformat]]></title>
       <url>http://spark8.tech/2016/06/22/zidingyiot/</url>
       <content type="html"><![CDATA[<a id="more"></a>
@@ -621,6 +500,148 @@ public class UploadFile {
     </entry>
     
     <entry>
+      <title><![CDATA[Hadoop2.x——倒排索引]]></title>
+      <url>http://spark8.tech/2016/06/22/daopaisuoyin/</url>
+      <content type="html"><![CDATA[<a id="more"></a>
+<h2 id="需求描述"><a href="#需求描述" class="headerlink" title="需求描述"></a>需求描述</h2><p>文档中找单词，当文档数越来越多时，直接打开文档找单词不靠谱(一个一个文档找比较慢)。<br>倒排索引：将单词出现在文档中的位置，记录下来。<br>如：a  -&gt;  1.txt,11.txt,56.txt</p>
+<h2 id="设计思路"><a href="#设计思路" class="headerlink" title="设计思路"></a>设计思路</h2><p>1、计算某个单词出现在一个文档中的次数<br>MR1阶段</p>
+<blockquote>
+<p> 单词     文档名称 次数<br>  分词器 IK<br>  获取文件名 inputSplit<br>  我和我的祖国 一刻也不能分割<br>  我<br>  我的祖国<br>  祖国<br>  ……<br>Map ：<br>KEYOUT: 我:文档名称<br> VALUEOUT: 1<br>SHUFFLE:<br>我:文档名称  Iterable1,1,1,1,1,1,1,1<br>Reduce：<br>我:文档名称 8<br>KEYOUT: 我<br>VALUEOUT： 文档名称 8</p>
+</blockquote>
+<p>2、计算一个单词出现在所有文档中的次数<br>MR2阶段</p>
+<blockquote>
+<p>MAP<br>KEYIN:我<br>VALUEIN:文档名称 8<br>SHUFFLE:<br>我:  Iterable[“文档名称1 8”,”文档名称2 18”]<br>Reduce：<br>KEYOUT:我<br>VALUEOUT：权重值 ，总出现次数，“文档名称1 8”，“文档名称2 18”</p>
+<h2 id="代码开发"><a href="#代码开发" class="headerlink" title="代码开发"></a>代码开发</h2><p>源码请参见<a href="www.baidu.com">github链接</a><br>1.驱动类</p>
+</blockquote>
+<pre><code>public class IndexJob {
+public static void main(String[] args) throws Exception {
+    String map1inputpath = &quot;&quot;;
+    String reduce1outputmap2inputpath = &quot;&quot;;
+    String respath = &quot;&quot;;
+
+    //第一个job
+    Job job = Job.getInstance();
+
+    job.setMapperClass(IndexMap1.class);
+    job.setMapOutputKeyClass(Text.class);
+    job.setMapOutputValueClass(IntWritable.class);
+
+    job.setReducerClass(IndexReduce1.class);
+    job.setOutputKeyClass(Text.class);
+    job.setOutputValueClass(Text.class);
+
+    job.setNumReduceTasks(2);
+
+    FileInputFormat.setInputPaths(job,new Path(&quot;/&quot;));
+    FileOutputFormat.setOutputPath(job, new Path(&quot;/&quot;));
+
+    if(job.waitForCompletion(true)){
+        //第二个job
+        //可不可以公用一个job
+        job.setMapperClass(IndexMap2.class);
+        job.setMapOutputKeyClass(Text.class);
+        job.setMapOutputValueClass(Text.class);
+
+        job.setReducerClass(IndexReduce2.class);
+        job.setOutputKeyClass(Text.class);
+        job.setOutputValueClass(Text.class);
+
+        job.setNumReduceTasks(2);
+
+        FileInputFormat.setInputPaths(job,new Path(&quot;/&quot;));
+        FileOutputFormat.setOutputPath(job, new Path(&quot;/&quot;));
+
+        job.waitForCompletion(true);
+    }
+}
+}
+</code></pre><p>2.IndexMap1类</p>
+<pre><code>public class IndexMap1 extends Mapper&lt;LongWritable,Text,Text,IntWritable&gt; {
+
+@Override
+protected void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
+    byte[] bytes = value.getBytes();
+
+    //2、对数据进行分词
+    InputStream inputStream = new ByteArrayInputStream(bytes);
+    Reader reader = new InputStreamReader(inputStream);
+    IKSegmenter ikSegmenter = new IKSegmenter(reader, true);
+
+    //获得文档名称
+    FileSplit inputSplit = (FileSplit) context.getInputSplit();
+    String fileName  = inputSplit.getPath().getName();
+
+    //4、map端词条出现次数统计
+    Lexeme t;
+    while ((t = ikSegmenter.next()) != null) {
+        context.write(new Text(t.getLexemeText()+&quot;:&quot;+fileName),new IntWritable(1));
+    }
+}
+}
+</code></pre><p>3.Index2Reduce1类</p>
+<pre><code>public class IndexReduce1 extends Reducer&lt;Text,IntWritable,Text,Text&gt; {
+
+@Override
+protected void reduce(Text key, Iterable&lt;IntWritable&gt; values, Context context) throws IOException, InterruptedException {
+    Integer sum=0;
+    for(IntWritable count:values){
+        sum+=count.get();
+    }
+    String[] arrStr = key.toString().split(&quot;:&quot;);
+    key.set(arrStr[0]);
+    context.write(key,new Text(arrStr[1]+&quot;:&quot;+sum));
+}
+}
+</code></pre><p>4.IndexMap2类</p>
+<pre><code>public class IndexMap2 extends Mapper&lt;Text,LongWritable,Text,Text&gt; {
+
+@Override
+protected void map(Text key, LongWritable value, Context context) throws IOException, InterruptedException {
+    String[] arrStr = value.toString().split(&quot; &quot;);
+    context.write(new Text(arrStr[0]),new Text(arrStr[1]));
+}
+}
+</code></pre><p>5.IndexReduce2类</p>
+<pre><code>public class IndexReduce2 extends Reducer&lt;Text,Text,Text,Text&gt; {
+
+@Override
+protected void reduce(Text key, Iterable&lt;Text&gt; values, Context context) throws IOException, InterruptedException {
+    int sum =0;
+    StringBuffer sb = new StringBuffer();
+    for(Text txt:values){
+        sb.append(txt);
+        sb.append(&quot;,&quot;);
+        String[] arrStr = values.toString().split(&quot;:&quot;);
+        sum += Integer.parseInt(arrStr[1]);
+    }
+    context.write(key,new Text(sum + &quot;&quot; + &quot;\t&quot; + sb.toString()));
+}
+}
+</code></pre>]]></content>
+    </entry>
+    
+    <entry>
+      <title><![CDATA[Hadoop2.x——MR并行计算框架结构及核心运行机制]]></title>
+      <url>http://spark8.tech/2016/06/22/mapreduce/</url>
+      <content type="html"><![CDATA[<a id="more"></a>
+<h2 id="一、MR结构"><a href="#一、MR结构" class="headerlink" title="一、MR结构"></a>一、MR结构</h2><p>一个完整的mapreduce程序在分布式运行时有三类实例进程：<br>1、MRAppMaster：负责整个程序的过程调度及状态协调<br>2、mapTask：负责map阶段的整个数据处理流程<br>3、ReduceTask：负责reduce阶段的整个数据处理流程</p>
+<h2 id="二、MR程序运行的两种模式"><a href="#二、MR程序运行的两种模式" class="headerlink" title="二、MR程序运行的两种模式"></a>二、MR程序运行的两种模式</h2><p>本地运行模式：<br>1、mapreduce程序是被提交给LocalJobRunner在本地以单进程的形式运行而处理的数据及输出结果可以在本地文件系统，也可以在hdfs上<br>2、怎样实现本地运行？写一个程序，不要带集群的配置文件（本质是你的mr程序的conf中是否有mapreduce.framework.name=local以及yarn.resourcemanager.hostname参数）<br>3、本地模式非常便于进行业务逻辑的debug，<br>集群运行模式：<br>1、将mapreduce程序提交给yarn集群resourcemanager，分发到很多的节点上并发执行<br>2、处理的数据和输出结果应该位于hdfs文件系统<br>3、提交集群的实现步骤：<br>A、将程序打成JAR包，然后在集群的任意一个节点上用hadoop命令启动<br>     $ hadoop jar wordcount.jar cn.itcast.bigdata.mrsimple.WordCountDriver inputpath outputpath<br>B、直接在linux的eclipse中运行main方法<br>（项目中要带参数：mapreduce.framework.name=yarn以及yarn的两个基本配置）<br>C、如果要在windows的eclipse中提交job给集群，则要修改YarnRunner类<br>参考链接<a href="http://www.flyne.org/article/1133" target="_blank" rel="external">http://www.flyne.org/article/1133</a></p>
+<h2 id="三、MR在YARN上的运行全流程"><a href="#三、MR在YARN上的运行全流程" class="headerlink" title="三、MR在YARN上的运行全流程"></a>三、MR在YARN上的运行全流程</h2><p>Yarn是一个资源调度平台，负责为运算程序提供服务器运算资源，相当于一个分布式的操作系统平台，而mapreduce等运算程序则相当于运行于操作系统之上的应用程序。<br>1、    yarn并不清楚用户提交的程序的运行机制<br>2、    yarn只提供运算资源的调度（用户程序向yarn申请资源，yarn就负责分配资源）<br>3、    yarn中的主管角色叫ResourceManager<br>4、    yarn中具体提供运算资源的角色叫NodeManager<br>这样一来，yarn其实就与运行的用户程序完全解耦，就意味着yarn上可以运行各种类型的分布式运算程序（mapreduce只是其中的一种），比如mapreduce、storm程序，spark程序，Tez，只要各种程序实现AppMaster接口即可。<br>下图为Yarn实现MR程序在集群上的资源调度过程：<br><img src="/images/mrYarn.png" alt="" title="mrYarn"></p>
+<h2 id="四、MR程序运行机制与shuffle"><a href="#四、MR程序运行机制与shuffle" class="headerlink" title="四、MR程序运行机制与shuffle"></a>四、MR程序运行机制与shuffle</h2><h3 id="MR运行流程"><a href="#MR运行流程" class="headerlink" title="MR运行流程"></a>MR运行流程</h3><p><img src="/images/mrlc.png" alt="" title="mr运行流程"><br>详细流程：<br>1、    maptask收集我们的map()方法输出的kv对，放到内存缓冲区中<br>2、    从内存缓冲区不断溢出本地磁盘文件，可能会溢出多个文件<br>3、    多个溢出文件会被合并成大的溢出文件<br>4、    在溢出过程中，及合并的过程中，都要调用partitoner进行分组和针对key进行排序<br>5、    reducetask根据自己的分区号，去各个maptask机器上取相应的结果分区数据<br>6、    reducetask会取到同一个分区的来自不同maptask的结果文件，reducetask会将这些文件再进行合并（归并排序）<br>7、    合并成大文件后，shuffle的过程也就结束了，后面进入reducetask的逻辑运算过程（从文件中取出一个一个的键值对group，调用用户自定义的reduce()方法）</p>
+<p>Shuffle中的缓冲区大小会影响到mapreduce程序的执行效率，原则上说，缓冲区越大，磁盘io的次数越少，执行速度就越快<br>缓冲区的大小可以通过参数调整,  参数：io.sort.mb  默认100M</p>
+<h3 id="shuffle"><a href="#shuffle" class="headerlink" title="shuffle"></a>shuffle</h3><p>mapreduce中，map阶段处理的数据如何传递给reduce阶段，是mapreduce框架中最关键的一个流程，这个流程就叫shuffle；<br>shuffle: 洗牌、发牌——（核心机制：数据分区，排序，缓存）；<br>具体来说：就是将maptask输出的处理结果数据，分发给reducetask，并在分发的过程中，对数据按key进行了分区和排序。<br>shuffle是MR处理流程中的一个过程，它的每一个处理步骤是分散在各个map task和reduce task节点上完成的，整体来看，分为3个操作：<br>1.分区partition<br>2.Sort根据key排序<br>3.Combiner进行局部value的合并<br>在接下来的文章中将通过具体的实战去具体体现三个操作的作用<br><a href="www.baidu.com">链接1</a> <a href="%E9%93%BE%E6%8E%A52">链接2</a> <a href="www.baidu.com">链接3</a> </p>
+<h2 id="五、MapTask并行度决定机制与切片"><a href="#五、MapTask并行度决定机制与切片" class="headerlink" title="五、MapTask并行度决定机制与切片"></a>五、MapTask并行度决定机制与切片</h2><h3 id="MapTask并行度决定机制"><a href="#MapTask并行度决定机制" class="headerlink" title="MapTask并行度决定机制"></a>MapTask并行度决定机制</h3><p>一个job的map阶段并行度由客户端在提交job时决定<br>而客户端对map阶段并行度的规划的基本逻辑为：<br>将待处理数据执行逻辑切片（即按照一个特定切片大小，将待处理数据划分成逻辑上的多个split），然后每一个split分配一个mapTask并行实例处理<br>这段逻辑及形成的切片规划描述文件，由FileInputFormat实现类的getSplits()方法完成。</p>
+<h3 id="FileInputFormat切片机制"><a href="#FileInputFormat切片机制" class="headerlink" title="FileInputFormat切片机制"></a>FileInputFormat切片机制</h3><p>a)    简单地按照文件的内容长度进行切片<br>b)    切片大小，默认等于block大小<br>c)    切片时不考虑数据集整体，而是逐个针对每一个文件单独切片<br>默认情况下，切片大小=blocksize，但是，不论怎么调参数，都不能让多个小文件“划入”一个split。<br>选择并发数的影响因素：<br>运算节点的硬件配置<br>运算任务的类型：CPU密集型还是IO密集型<br>运算任务的数据量<br><img src="/images/mrsplit.png" alt="" title="mrsplit"></p>
+<h3 id="map并行度的经验"><a href="#map并行度的经验" class="headerlink" title="map并行度的经验"></a>map并行度的经验</h3><p>如果硬件配置为2*12core + 64G，恰当的map并行度是大约每个节点20-100个map，最好每个maptask的执行时间至少一分钟。<br>如果job的每个map或者 reduce task的运行时间都只有30-40秒钟，那么就减少该job的map或者reduce数，每一个task(map|reduce)的setup和加入到调度器中进行调度，这个中间的过程可能都要花费几秒钟，所以如果每个task都非常快就跑完了，就会在task的开始和结束的时候浪费太多的时间。<br>配置task的JVM重用可以改善该问题：<br>（mapred.job.reuse.jvm.num.tasks，默认是1，表示一个JVM上最多可以顺序执行的task数目（属于同一个Job）是1。也就是说一个task启一个JVM）</p>
+<p>如果input的文件非常的大，比如一个文件2G，同时，机器性能又比较好，那么，可以考虑将hdfs上的每个block size设大，比如设成256MB或者512MB<br>\&lt;所谓经验，是在特定数据、特定机器配置、特定业务逻辑场景下，试出来的></p>
+<h2 id="六、ReduceTask并行度的决定"><a href="#六、ReduceTask并行度的决定" class="headerlink" title="六、ReduceTask并行度的决定"></a>六、ReduceTask并行度的决定</h2><p>reducetask的并行度同样影响整个job的执行并发度和执行效率，但与maptask的并发数由切片数决定不同，Reducetask数量的决定是可以直接手动设置：</p>
+<p>//默认值是1，手动设置为4<br>job.setNumReduceTasks(4);</p>
+<p>如果数据分布不均匀，就有可能在reduce阶段产生数据倾斜<br>注意： reducetask数量并不是任意设置，还要考虑业务逻辑需求，有些情况下，需要计算全局汇总结果，就只能有1个reducetask</p>
+<p>尽量不要运行太多的reduce task。对大多数job来说，最好rduce的个数最多和集群中的reduce持平，或者比集群的 reduce slots小。这个对于小集群而言，尤其重要。</p>
+]]></content>
+    </entry>
+    
+    <entry>
       <title><![CDATA[Hadoop2.x——分布式缓存(解决数据倾斜问题)]]></title>
       <url>http://spark8.tech/2016/06/22/fbshchadoop/</url>
       <content type="html"><![CDATA[<a id="more"></a>
@@ -791,6 +812,28 @@ public static void main(String[] args) throws Exception {
     </entry>
     
     <entry>
+      <title><![CDATA[Hadoop2.x——MR参数优化]]></title>
+      <url>http://spark8.tech/2016/06/22/mrziyuanyouhua/</url>
+      <content type="html"><![CDATA[<a id="more"></a>
+<h2 id="1-资源相关参数"><a href="#1-资源相关参数" class="headerlink" title="1.  资源相关参数"></a>1.  资源相关参数</h2><p>以下参数是在用户自己的mr应用程序中配置就可以生效</p>
+<blockquote>
+<p>(1) mapreduce.map.memory.mb: 一个Map Task可使用的资源上限（单位:MB），默认为1024。如果Map Task实际使用的资源量超过该值，则会被强制杀死。<br>(2) mapreduce.reduce.memory.mb: 一个Reduce Task可使用的资源上限（单位:MB），默认为1024。如果Reduce Task实际使用的资源量超过该值，则会被强制杀死。<br>(3) mapreduce.map.java.opts: Map Task的JVM参数，你可以在此配置默认的java heap size等参数, e.g.“-Xmx1024m -verbose:gc -Xloggc:/tmp/@taskid@.gc” （@taskid@会被Hadoop框架自动换为相应的taskid）, 默认值: “”<br>(4) mapreduce.reduce.java.opts: Reduce Task的JVM参数，你可以在此配置默认的java heap size等参数, e.g.“-Xmx1024m -verbose:gc -Xloggc:/tmp/@taskid@.gc”, 默认值: “”<br>(5) mapreduce.map.cpu.vcores: 每个Map task可使用的最多cpu core数目, 默认值: 1<br>(6) mapreduce.reduce.cpu.vcores: 每个Reduce task可使用的最多cpu core数目, 默认值: 1</p>
+</blockquote>
+<p>//应该在yarn启动之前就配置在服务器的配置文件中才能生效</p>
+<blockquote>
+<p>(7) yarn.scheduler.minimum-allocation-mb      1024   给应用程序container分配的最小内存<br>(8) yarn.scheduler.maximum-allocation-mb      8192    给应用程序container分配的最大内存<br>(9) yarn.scheduler.minimum-allocation-vcores    1<br>(10)yarn.scheduler.maximum-allocation-vcores    32<br>(11)yarn.nodemanager.resource.memory-mb   8192  </p>
+</blockquote>
+<p>//shuffle性能优化的关键参数，应在yarn启动之前就配置好</p>
+<blockquote>
+<p>(12)mapreduce.task.io.sort.mb   100         //shuffle的环形缓冲区大小，默认100m<br>(13)mapreduce.map.sort.spill.percent   0.8    //环形缓冲区溢出的阈值，默认80%</p>
+<h2 id="2-容错相关参数"><a href="#2-容错相关参数" class="headerlink" title="2. 容错相关参数"></a>2. 容错相关参数</h2><p>(1) mapreduce.map.maxattempts: 每个Map Task最大重试次数，一旦重试参数超过该值，则认为Map Task运行失败，默认值：4。<br>(2) mapreduce.reduce.maxattempts: 每个Reduce Task最大重试次数，一旦重试参数超过该值，则认为Map Task运行失败，默认值：4。<br>(3) mapreduce.map.failures.maxpercent: 当失败的Map Task失败比例超过该值为，整个作业则失败，默认值为0. 如果你的应用程序允许丢弃部分输入数据，则该该值设为一个大于0的值，比如5，表示如果有低于5%的Map Task失败（如果一个Map Task重试次数超过mapreduce.map.maxattempts，则认为这个Map Task失败，其对应的输入数据将不会产生任何结果），整个作业扔认为成功。<br>(4) mapreduce.reduce.failures.maxpercent: 当失败的Reduce Task失败比例超过该值为，整个作业则失败，默认值为0.<br>(5) mapreduce.task.timeout: Task超时时间，经常需要设置的一个参数，该参数表达的意思为：如果一个task在一定时间内没有任何进入，即不会读取新的数据，也没有输出数据，则认为该task处于block状态，可能是卡住了，也许永远会卡主，为了防止因为用户程序永远block住不退出，则强制设置了一个该超时时间（单位毫秒），默认是300000。如果你的程序对每条输入数据的处理时间过长（比如会访问数据库，通过网络拉取数据等），建议将该参数调大，该参数过小常出现的错误提示  是“AttemptID:attempt_14267829456721_123456_m_000224_0 Timed out after 300 secsContainer killed by the ApplicationMaster.”。</p>
+<h2 id="3-本地运行mapreduce-作业"><a href="#3-本地运行mapreduce-作业" class="headerlink" title="3.  本地运行mapreduce 作业"></a>3.  本地运行mapreduce 作业</h2><p>设置以下几个参数:<br>mapreduce.framework.name=local<br>mapreduce.jobtracker.address=local<br>fs.defaultFS=local</p>
+<h2 id="4-效率和稳定性相关参数"><a href="#4-效率和稳定性相关参数" class="headerlink" title="4. 效率和稳定性相关参数"></a>4. 效率和稳定性相关参数</h2><p>(1) mapreduce.map.speculative: 是否为Map Task打开推测执行机制，默认为false<br>(2) mapreduce.reduce.speculative: 是否为Reduce Task打开推测执行机制，默认为false<br>(3) mapreduce.job.user.classpath.first &amp; mapreduce.task.classpath.user.precedence：当同一个class同时出现在用户jar包和hadoop jar中时，优先使用哪个jar包中的class，默认为false，表示优先使用hadoop jar中的class。<br>(4) mapreduce.input.fileinputformat.split.minsize: FileInputFormat做切片时的最小切片大小，(5)mapreduce.input.fileinputformat.split.maxsize:  FileInputFormat做切片时的最大切片大小 (切片的默认大小就等于blocksize，即 134217728) </p>
+</blockquote>
+]]></content>
+    </entry>
+    
+    <entry>
       <title><![CDATA[Spark1.6—RDD自定义分区器Partitioner]]></title>
       <url>http://spark8.tech/2016/06/21/sparkfqq/</url>
       <content type="html"><![CDATA[<a id="more"></a>
@@ -880,71 +923,6 @@ val finalResult = partitioned.mapPartitions(it =&gt; {
 finalResult.saveAsTextFile(&quot;/Users/Variant/Desktop/result&quot;)
 sc.stop()
 }
-}
-</code></pre>]]></content>
-    </entry>
-    
-    <entry>
-      <title><![CDATA[Spark1.6—自定义排序规则，对比Hadoop MR]]></title>
-      <url>http://spark8.tech/2016/06/21/sparksortby/</url>
-      <content type="html"><![CDATA[<a id="more"></a>
-<h2 id="需求描述"><a href="#需求描述" class="headerlink" title="需求描述"></a>需求描述</h2><p>使用隐式转换，自定义排序规则</p>
-<h2 id="实现思路"><a href="#实现思路" class="headerlink" title="实现思路"></a>实现思路</h2><p>第一种方式：case class Girl 混入 Ordered<a href="#">Girl</a>接口，实现comapre方法，但是明显的高耦合<br>第二种方式：使用隐式转换，按sortBy要求 传入隐式值girlOrdering，实现解耦和自定义排序<br><img src="/images/sortby.png" alt=""></p>
-<h2 id="代码实现"><a href="#代码实现" class="headerlink" title="代码实现"></a>代码实现</h2><p>第一种方式：</p>
-<pre><code>object CustomSort {
-
-  def main(args: Array[String]) {
-    val conf = new SparkConf().setAppName(&quot;CustomSort&quot;).setMaster(&quot;local[2]&quot;)
-    val sc = new SparkContext(conf)
-    val rdd1 = sc.parallelize(List((&quot;yuihatano&quot;, 90, 28, 1), (&quot;angelababy&quot;, 90, 27, 2),(&quot;JuJingYi&quot;, 95, 22, 3)))
-    import OrderContext._
-    val rdd2 = rdd1.sortBy(x =&gt; Girl(x._2, x._3), false)
-    println(rdd2.collect().toBuffer)
-    sc.stop()
-  }
-
-}
-
-/**
-  * 第一种方式
-  * @param faceValue
-  * @param age
-*/
-case class Girl(val faceValue: Int, val age: Int) extends Ordered[Girl] with Serializable {
-  override def compare(that: Girl): Int = {
-    if(this.faceValue == that.faceValue) {
-      that.age - this.age
-    } else {
-      this.faceValue -that.faceValue
-    }
-  }
-}
-</code></pre><p>第二种方式：</p>
-<pre><code>case class Girl(faceValue: Int, age: Int) extends Serializable
-
-object OrderContext {
-  implicit val girlOrdering  = new Ordering[Girl] {
-    override def compare(x: Girl, y: Girl): Int = {
-      if(x.faceValue &gt; y.faceValue) 1
-      else if (x.faceValue == y.faceValue) {
-        if(x.age &gt; y.age) -1 else 1
-      } else -1
-    }
-  }
-}
-
-object CustomSort {
-
-  def main(args: Array[String]) {
-    val conf = new SparkConf().setAppName(&quot;CustomSort&quot;).setMaster(&quot;local[2]&quot;)
-    val sc = new SparkContext(conf)
-    val rdd1 = sc.parallelize(List((&quot;yuihatano&quot;, 90, 28, 1), (&quot;angelababy&quot;, 90, 27, 2),(&quot;JuJingYi&quot;, 95, 22, 3)))
-    import OrderContext._
-    val rdd2 = rdd1.sortBy(x =&gt; Girl(x._2, x._3), false)
-    println(rdd2.collect().toBuffer)
-    sc.stop()
-  }
-
 }
 </code></pre>]]></content>
     </entry>
@@ -1050,6 +1028,71 @@ object CustomSort {
     sc.stop()
 
   }
+}
+</code></pre>]]></content>
+    </entry>
+    
+    <entry>
+      <title><![CDATA[Spark1.6—自定义排序规则，对比Hadoop MR]]></title>
+      <url>http://spark8.tech/2016/06/21/sparksortby/</url>
+      <content type="html"><![CDATA[<a id="more"></a>
+<h2 id="需求描述"><a href="#需求描述" class="headerlink" title="需求描述"></a>需求描述</h2><p>使用隐式转换，自定义排序规则</p>
+<h2 id="实现思路"><a href="#实现思路" class="headerlink" title="实现思路"></a>实现思路</h2><p>第一种方式：case class Girl 混入 Ordered<a href="#">Girl</a>接口，实现comapre方法，但是明显的高耦合<br>第二种方式：使用隐式转换，按sortBy要求 传入隐式值girlOrdering，实现解耦和自定义排序<br><img src="/images/sortby.png" alt=""></p>
+<h2 id="代码实现"><a href="#代码实现" class="headerlink" title="代码实现"></a>代码实现</h2><p>第一种方式：</p>
+<pre><code>object CustomSort {
+
+  def main(args: Array[String]) {
+    val conf = new SparkConf().setAppName(&quot;CustomSort&quot;).setMaster(&quot;local[2]&quot;)
+    val sc = new SparkContext(conf)
+    val rdd1 = sc.parallelize(List((&quot;yuihatano&quot;, 90, 28, 1), (&quot;angelababy&quot;, 90, 27, 2),(&quot;JuJingYi&quot;, 95, 22, 3)))
+    import OrderContext._
+    val rdd2 = rdd1.sortBy(x =&gt; Girl(x._2, x._3), false)
+    println(rdd2.collect().toBuffer)
+    sc.stop()
+  }
+
+}
+
+/**
+  * 第一种方式
+  * @param faceValue
+  * @param age
+*/
+case class Girl(val faceValue: Int, val age: Int) extends Ordered[Girl] with Serializable {
+  override def compare(that: Girl): Int = {
+    if(this.faceValue == that.faceValue) {
+      that.age - this.age
+    } else {
+      this.faceValue -that.faceValue
+    }
+  }
+}
+</code></pre><p>第二种方式：</p>
+<pre><code>case class Girl(faceValue: Int, age: Int) extends Serializable
+
+object OrderContext {
+  implicit val girlOrdering  = new Ordering[Girl] {
+    override def compare(x: Girl, y: Girl): Int = {
+      if(x.faceValue &gt; y.faceValue) 1
+      else if (x.faceValue == y.faceValue) {
+        if(x.age &gt; y.age) -1 else 1
+      } else -1
+    }
+  }
+}
+
+object CustomSort {
+
+  def main(args: Array[String]) {
+    val conf = new SparkConf().setAppName(&quot;CustomSort&quot;).setMaster(&quot;local[2]&quot;)
+    val sc = new SparkContext(conf)
+    val rdd1 = sc.parallelize(List((&quot;yuihatano&quot;, 90, 28, 1), (&quot;angelababy&quot;, 90, 27, 2),(&quot;JuJingYi&quot;, 95, 22, 3)))
+    import OrderContext._
+    val rdd2 = rdd1.sortBy(x =&gt; Girl(x._2, x._3), false)
+    println(rdd2.collect().toBuffer)
+    sc.stop()
+  }
+
 }
 </code></pre>]]></content>
     </entry>
@@ -1195,47 +1238,67 @@ object CustomSort {
     </entry>
     
     <entry>
-      <title><![CDATA[Scala—-有序列表合并]]></title>
-      <url>http://spark8.tech/2016/06/18/scalayx/</url>
-      <content type="html"><![CDATA[<a id="more"></a>
-<p>算法本身并不复杂，但是要注意的是递归一定要显式的声明返回值类型。</p>
-<pre><code>  object SortList {
+      <title><![CDATA[Scala——使用Currry实现视图界定]]></title>
+      <url>http://spark8.tech/2016/06/18/scalacurry/</url>
+      <content type="html"><![CDATA[<p>\&lt;!–more–><br>上文中使用了视图界定来解决类与类型的耦合以及规则的耦合，那么不使用视图界定可不可以呢？当然是可以的，这次就用柯里化（Curry）+隐式转换实现视图界定和上下文界定同样的效果。<br>代码如下：</p>
+<pre><code>class Girl(val name:String,var age :Int, val faceValue : Int = 99){
 
-  def main(args: Array[String]) {
-
-    //合并算法
-    def mergedsort[T] (less: (T,T) =&gt; Boolean)(input : List[T]):List[T] = {
-      /**
-       * @param  xlist 要合并的有序列表
-       * @param  ylist 要合并的有序列表
-       * @return 合并后的列表
-       */
-      def merge(xlist: List[T], ylist: List[T]): List[T] = {
-        (xlist,ylist) match{
-          case (Nil,_) =&gt; ylist
-          case (_,Nil) =&gt; xlist
-          case (x :: xtail,y :: ytail) =&gt;
-            if(less(x,y))  x :: merge(xtail,ylist)
-            else y :: merge(xlist,ytail)
-        }
-      }
-      val n =input.length / 2
-      if(n == 0) input
-      else{
-        val (x,y) =input splitAt n
-        merge(mergedsort(less)(x), mergedsort(less)(y))
-
-      }
+}
+object Spark8Predef {
+//T =&gt; Ordered[T]
+implicit def girlToPredef(girl : Girl) = new Ordered[Girl]{
+  override def compare(that: Girl): Int = {
+    if(girl.faceValue == that.faceValue) {
+      that.age - girl.age
+    } else {
+      girl.faceValue - that.faceValue
     }
-
-    println(mergedsort((x : Int,y :Int) =&gt; x &lt; y) (List(1,5,4,7,235,333,43,2,6)))
-
-    val reverse_SortList = mergedsort((x:Int,y:Int) =&gt; x &gt; y ) _
-    println(reverse_SortList(List(1,5,4,7,235,333,43,2,6)))
-
   }
 }
-</code></pre>]]></content>
+//T =&gt;ordering[T] 
+implicit object orderingGril extends Ordering[Girl] {
+  override def compare(x: Girl, y: Girl): Int = {
+
+    if (x.faceValue == y.faceValue) {
+      y.age - x.age
+    } else {
+      x.faceValue - y.faceValue
+    }
+  }
+}
+
+}
+
+class ChooseMachine[T] {
+
+  def chooseGirl(a: T, b: T)(implicit ord: T =&gt; Ordered[T]): T = {
+    // T类型要有&gt;方法,就要拥有T =&gt; Ordered[T] 的函数或者方法
+    if (a &gt; b) a else b
+  }
+
+  def choose2(first: T, second: T)(implicit ord : Ordering[T]) : T = {
+    import Ordered.orderingToOrdered
+    if(first &gt; second) first else second
+  }
+}
+
+/**
+  * 想要实现与viewbound一样的功能，传入一个隐式转换函数
+   */
+object ChooseMachine {
+  def main(args: Array[String]) {
+    import Spark8Predef._
+    val chooser = new ChooseMachine[Girl]
+    val g1 = new Girl(&quot;tingting&quot;, 18, 85)
+    val g2 = new Girl(&quot;angelaBaby&quot;, 20, 95)
+    val choose = chooser.chooseGirl(g1, g2)
+
+    println(choose.name)
+  }
+
+}
+</code></pre><p>其实整个代码还是蛮简单的，就是用ChooseMachine的泛型，泛型参数不是视图界定，那么就在ChooseMachine的具体方法上实现柯里化，然后在导入Spark8Predef里面的隐式转换方法，就OK啦。</p>
+]]></content>
     </entry>
     
     <entry>
@@ -1533,67 +1596,47 @@ case object CheckTimeOutWorker
     </entry>
     
     <entry>
-      <title><![CDATA[Scala——使用Currry实现视图界定]]></title>
-      <url>http://spark8.tech/2016/06/18/scalacurry/</url>
-      <content type="html"><![CDATA[<p>\&lt;!–more–><br>上文中使用了视图界定来解决类与类型的耦合以及规则的耦合，那么不使用视图界定可不可以呢？当然是可以的，这次就用柯里化（Curry）+隐式转换实现视图界定和上下文界定同样的效果。<br>代码如下：</p>
-<pre><code>class Girl(val name:String,var age :Int, val faceValue : Int = 99){
+      <title><![CDATA[Scala—-有序列表合并]]></title>
+      <url>http://spark8.tech/2016/06/18/scalayx/</url>
+      <content type="html"><![CDATA[<a id="more"></a>
+<p>算法本身并不复杂，但是要注意的是递归一定要显式的声明返回值类型。</p>
+<pre><code>  object SortList {
 
-}
-object Spark8Predef {
-//T =&gt; Ordered[T]
-implicit def girlToPredef(girl : Girl) = new Ordered[Girl]{
-  override def compare(that: Girl): Int = {
-    if(girl.faceValue == that.faceValue) {
-      that.age - girl.age
-    } else {
-      girl.faceValue - that.faceValue
-    }
-  }
-}
-//T =&gt;ordering[T] 
-implicit object orderingGril extends Ordering[Girl] {
-  override def compare(x: Girl, y: Girl): Int = {
-
-    if (x.faceValue == y.faceValue) {
-      y.age - x.age
-    } else {
-      x.faceValue - y.faceValue
-    }
-  }
-}
-
-}
-
-class ChooseMachine[T] {
-
-  def chooseGirl(a: T, b: T)(implicit ord: T =&gt; Ordered[T]): T = {
-    // T类型要有&gt;方法,就要拥有T =&gt; Ordered[T] 的函数或者方法
-    if (a &gt; b) a else b
-  }
-
-  def choose2(first: T, second: T)(implicit ord : Ordering[T]) : T = {
-    import Ordered.orderingToOrdered
-    if(first &gt; second) first else second
-  }
-}
-
-/**
-  * 想要实现与viewbound一样的功能，传入一个隐式转换函数
-   */
-object ChooseMachine {
   def main(args: Array[String]) {
-    import Spark8Predef._
-    val chooser = new ChooseMachine[Girl]
-    val g1 = new Girl(&quot;tingting&quot;, 18, 85)
-    val g2 = new Girl(&quot;angelaBaby&quot;, 20, 95)
-    val choose = chooser.chooseGirl(g1, g2)
 
-    println(choose.name)
+    //合并算法
+    def mergedsort[T] (less: (T,T) =&gt; Boolean)(input : List[T]):List[T] = {
+      /**
+       * @param  xlist 要合并的有序列表
+       * @param  ylist 要合并的有序列表
+       * @return 合并后的列表
+       */
+      def merge(xlist: List[T], ylist: List[T]): List[T] = {
+        (xlist,ylist) match{
+          case (Nil,_) =&gt; ylist
+          case (_,Nil) =&gt; xlist
+          case (x :: xtail,y :: ytail) =&gt;
+            if(less(x,y))  x :: merge(xtail,ylist)
+            else y :: merge(xlist,ytail)
+        }
+      }
+      val n =input.length / 2
+      if(n == 0) input
+      else{
+        val (x,y) =input splitAt n
+        merge(mergedsort(less)(x), mergedsort(less)(y))
+
+      }
+    }
+
+    println(mergedsort((x : Int,y :Int) =&gt; x &lt; y) (List(1,5,4,7,235,333,43,2,6)))
+
+    val reverse_SortList = mergedsort((x:Int,y:Int) =&gt; x &gt; y ) _
+    println(reverse_SortList(List(1,5,4,7,235,333,43,2,6)))
+
   }
-
 }
-</code></pre><p>其实整个代码还是蛮简单的，就是用ChooseMachine的泛型，泛型参数不是视图界定，那么就在ChooseMachine的具体方法上实现柯里化，然后在导入Spark8Predef里面的隐式转换方法，就OK啦。</p>
-]]></content>
+</code></pre>]]></content>
     </entry>
     
     <entry>
@@ -2325,104 +2368,6 @@ public Map&lt;String, Double&gt; recommend(String userName) {
     </entry>
     
     <entry>
-      <title><![CDATA[Zookeeper-分布式共享锁]]></title>
-      <url>http://spark8.tech/2016/03/11/zkfbss/</url>
-      <content type="html"><![CDATA[<a id="more"></a>
-<h2 id="一、需求描述"><a href="#一、需求描述" class="headerlink" title="一、需求描述"></a>一、需求描述</h2><p>  在我们自己的分布式业务系统中，可能会存在某种资源，需要被整个系统的各台服务器共享访问，但是只允许一台服务器同时访问</p>
-<h2 id="二、设计思路"><a href="#二、设计思路" class="headerlink" title="二、设计思路"></a>二、设计思路</h2><ol>
-<li>连接zookeeper，process监听子节点变化事件，接收事件按规则写业务逻辑，并重新注册锁</li>
-<li>向zookeeper注册一把锁</li>
-<li>从zk的锁父目录下，获取所有子节点，并且注册对父节点的监听</li>
-<li>如果争抢资源的程序就只有自己，则可以直接去访问共享资源</li>
-<li><p>访问资源后删除锁</p>
-<h2 id="三、代码开发"><a href="#三、代码开发" class="headerlink" title="三、代码开发"></a>三、代码开发</h2><p> public class DistributedClientLock {</p>
-</li>
-</ol>
-<pre><code>// 会话超时
-private static final int SESSION_TIMEOUT = 2000;
-// zookeeper集群地址
-private String hosts = &quot;mini1:2181,mini2:2181,mini3:2181&quot;;
-private String groupNode = &quot;locks&quot;;
-private String subNode = &quot;sub&quot;;
-private boolean haveLock = false;
-
-private ZooKeeper zk;
-// 记录自己创建的子节点路径
-private volatile String thisPath;
-
-/**
- * 连接zookeeper
- */
-public void connectZookeeper() throws Exception {
-    zk = new ZooKeeper(hosts, SESSION_TIMEOUT, new Watcher() {
-        public void process(WatchedEvent event) {
-            try {
-
-                // 判断事件类型，此处只处理子节点变化事件
-                if (event.getType() == EventType.NodeChildrenChanged &amp;&amp; event.getPath().equals(&quot;/&quot; + groupNode)) {
-                    //获取子节点，并对父节点进行监听
-                    List&lt;String&gt; childrenNodes = zk.getChildren(&quot;/&quot; + groupNode, true);
-                    String thisNode = thisPath.substring((&quot;/&quot; + groupNode + &quot;/&quot;).length());
-                    // 去比较是否自己是最小id
-                    Collections.sort(childrenNodes);
-                    if (childrenNodes.indexOf(thisNode) == 0) {
-                        //访问共享资源处理业务，并且在处理完成之后删除锁
-                        doSomething();
-
-                        //重新注册一把新的锁
-                        thisPath = zk.create(&quot;/&quot; + groupNode + &quot;/&quot; + subNode, null, Ids.OPEN_ACL_UNSAFE,
-                                CreateMode.EPHEMERAL_SEQUENTIAL);
-                    }
-                }
-        } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-    });
-
-    // 1、程序一进来就先注册一把锁到zk上
-    thisPath = zk.create(&quot;/&quot; + groupNode + &quot;/&quot; + subNode, null, Ids.OPEN_ACL_UNSAFE,
-            CreateMode.EPHEMERAL_SEQUENTIAL);
-
-    // wait一小会，便于观察
-    Thread.sleep(new Random().nextInt(1000));
-
-    // 从zk的锁父目录下，获取所有子节点，并且注册对父节点的监听
-    List&lt;String&gt; childrenNodes = zk.getChildren(&quot;/&quot; + groupNode, true);
-
-    // 如果争抢资源的程序就只有自己，则可以直接去访问共享资源 
-    if (childrenNodes.size() == 1) {
-        doSomething();
-        thisPath = zk.create(&quot;/&quot; + groupNode + &quot;/&quot; + subNode, null, Ids.OPEN_ACL_UNSAFE,
-                CreateMode.EPHEMERAL_SEQUENTIAL);
-    }
-}
-
-/**
- * 处理业务逻辑，并且在最后释放锁
- */
-private void doSomething() throws Exception {
-    try {
-        System.out.println(&quot;gain lock: &quot; + thisPath);
-        Thread.sleep(2000);
-        // do something
-    } finally {
-        System.out.println(&quot;finished: &quot; + thisPath);
-//删除之前的锁节点
-        zk.delete(this.thisPath, -1);
-    }
-}
-
-public static void main(String[] args) throws Exception {
-    DistributedClientLock dl = new DistributedClientLock();
-    dl.connectZookeeper();
-    Thread.sleep(Long.MAX_VALUE);
-}
-</code></pre><p>}</p>
-]]></content>
-    </entry>
-    
-    <entry>
       <title><![CDATA[Zookeeper-服务器上下线动态感知]]></title>
       <url>http://spark8.tech/2016/03/11/zkfbs/</url>
       <content type="html"><![CDATA[<a id="more"></a>
@@ -2562,6 +2507,104 @@ public static void main(String[] args) throws Exception {
     </entry>
     
     <entry>
+      <title><![CDATA[Zookeeper-分布式共享锁]]></title>
+      <url>http://spark8.tech/2016/03/11/zkfbss/</url>
+      <content type="html"><![CDATA[<a id="more"></a>
+<h2 id="一、需求描述"><a href="#一、需求描述" class="headerlink" title="一、需求描述"></a>一、需求描述</h2><p>  在我们自己的分布式业务系统中，可能会存在某种资源，需要被整个系统的各台服务器共享访问，但是只允许一台服务器同时访问</p>
+<h2 id="二、设计思路"><a href="#二、设计思路" class="headerlink" title="二、设计思路"></a>二、设计思路</h2><ol>
+<li>连接zookeeper，process监听子节点变化事件，接收事件按规则写业务逻辑，并重新注册锁</li>
+<li>向zookeeper注册一把锁</li>
+<li>从zk的锁父目录下，获取所有子节点，并且注册对父节点的监听</li>
+<li>如果争抢资源的程序就只有自己，则可以直接去访问共享资源</li>
+<li><p>访问资源后删除锁</p>
+<h2 id="三、代码开发"><a href="#三、代码开发" class="headerlink" title="三、代码开发"></a>三、代码开发</h2><p> public class DistributedClientLock {</p>
+</li>
+</ol>
+<pre><code>// 会话超时
+private static final int SESSION_TIMEOUT = 2000;
+// zookeeper集群地址
+private String hosts = &quot;mini1:2181,mini2:2181,mini3:2181&quot;;
+private String groupNode = &quot;locks&quot;;
+private String subNode = &quot;sub&quot;;
+private boolean haveLock = false;
+
+private ZooKeeper zk;
+// 记录自己创建的子节点路径
+private volatile String thisPath;
+
+/**
+ * 连接zookeeper
+ */
+public void connectZookeeper() throws Exception {
+    zk = new ZooKeeper(hosts, SESSION_TIMEOUT, new Watcher() {
+        public void process(WatchedEvent event) {
+            try {
+
+                // 判断事件类型，此处只处理子节点变化事件
+                if (event.getType() == EventType.NodeChildrenChanged &amp;&amp; event.getPath().equals(&quot;/&quot; + groupNode)) {
+                    //获取子节点，并对父节点进行监听
+                    List&lt;String&gt; childrenNodes = zk.getChildren(&quot;/&quot; + groupNode, true);
+                    String thisNode = thisPath.substring((&quot;/&quot; + groupNode + &quot;/&quot;).length());
+                    // 去比较是否自己是最小id
+                    Collections.sort(childrenNodes);
+                    if (childrenNodes.indexOf(thisNode) == 0) {
+                        //访问共享资源处理业务，并且在处理完成之后删除锁
+                        doSomething();
+
+                        //重新注册一把新的锁
+                        thisPath = zk.create(&quot;/&quot; + groupNode + &quot;/&quot; + subNode, null, Ids.OPEN_ACL_UNSAFE,
+                                CreateMode.EPHEMERAL_SEQUENTIAL);
+                    }
+                }
+        } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    });
+
+    // 1、程序一进来就先注册一把锁到zk上
+    thisPath = zk.create(&quot;/&quot; + groupNode + &quot;/&quot; + subNode, null, Ids.OPEN_ACL_UNSAFE,
+            CreateMode.EPHEMERAL_SEQUENTIAL);
+
+    // wait一小会，便于观察
+    Thread.sleep(new Random().nextInt(1000));
+
+    // 从zk的锁父目录下，获取所有子节点，并且注册对父节点的监听
+    List&lt;String&gt; childrenNodes = zk.getChildren(&quot;/&quot; + groupNode, true);
+
+    // 如果争抢资源的程序就只有自己，则可以直接去访问共享资源 
+    if (childrenNodes.size() == 1) {
+        doSomething();
+        thisPath = zk.create(&quot;/&quot; + groupNode + &quot;/&quot; + subNode, null, Ids.OPEN_ACL_UNSAFE,
+                CreateMode.EPHEMERAL_SEQUENTIAL);
+    }
+}
+
+/**
+ * 处理业务逻辑，并且在最后释放锁
+ */
+private void doSomething() throws Exception {
+    try {
+        System.out.println(&quot;gain lock: &quot; + thisPath);
+        Thread.sleep(2000);
+        // do something
+    } finally {
+        System.out.println(&quot;finished: &quot; + thisPath);
+//删除之前的锁节点
+        zk.delete(this.thisPath, -1);
+    }
+}
+
+public static void main(String[] args) throws Exception {
+    DistributedClientLock dl = new DistributedClientLock();
+    dl.connectZookeeper();
+    Thread.sleep(Long.MAX_VALUE);
+}
+</code></pre><p>}</p>
+]]></content>
+    </entry>
+    
+    <entry>
       <title><![CDATA[Zookeeper-原理补充]]></title>
       <url>http://spark8.tech/2016/03/11/zkyuanli/</url>
       <content type="html"><![CDATA[<a id="more"></a>
@@ -2584,27 +2627,6 @@ public static void main(String[] args) throws Exception {
 <h2 id="6-提高namenode元数据的安全性"><a href="#6-提高namenode元数据的安全性" class="headerlink" title="6. 提高namenode元数据的安全性"></a>6. 提高namenode元数据的安全性</h2><p>在未做HA的前提下…<br>Q:  如果namenode的元数据损坏，如何恢复？<br>A：<br>1、拷贝secondary namenode节点上工作目录中的namesecondary文件夹到namenode所在节点的工作目录中<br>2、将namesecondary重名为name<br>3、用hadoop-daemon.sh start namenode 启动namenode即可<br>但是由于namenode和secondarynamenode合并需要触发容量阈值和时间阈值，有可能中途宕机丢失数据，所以必须采取更多措施来保证元数据的安全性。<br>Q： 如何尽可能提高安全性呢？<br>A： 将namenode的元数据目录配置到多块磁盘上，或者配置到NFS文件系统中<br>先在linux系统中挂载磁盘<br>  sda1  —> mount /dev/sda1  /metadata/disk1<br>  sdb1  —> mount /dev/sdb1  /metadata/disk2<br>  sdc1  —> mount /dev/sdc1  /metadata/disk3<br>然后配置hadoop<br>     <property><br>     <name>dfs.namenode.name.dir</name><br>     <value>/metadata/disk1,/metadata/disk2,/metadata/disk3</value><br>   </property></p>
 </blockquote>
 <p>namenode就会将元数据完整地同时写入三块磁盘</p>
-]]></content>
-    </entry>
-    
-    <entry>
-      <title><![CDATA[Hadoop2.x——MR并行计算框架结构及核心运行机制]]></title>
-      <url>http://spark8.tech/2015/11/10/mapreduce/</url>
-      <content type="html"><![CDATA[<p>&lt;!—-more—-&gt;</p>
-<h2 id="一、MR结构"><a href="#一、MR结构" class="headerlink" title="一、MR结构"></a>一、MR结构</h2><p>一个完整的mapreduce程序在分布式运行时有三类实例进程：<br>1、MRAppMaster：负责整个程序的过程调度及状态协调<br>2、mapTask：负责map阶段的整个数据处理流程<br>3、ReduceTask：负责reduce阶段的整个数据处理流程</p>
-<h2 id="二、MR程序运行的两种模式"><a href="#二、MR程序运行的两种模式" class="headerlink" title="二、MR程序运行的两种模式"></a>二、MR程序运行的两种模式</h2><p>本地运行模式：<br>1、mapreduce程序是被提交给LocalJobRunner在本地以单进程的形式运行而处理的数据及输出结果可以在本地文件系统，也可以在hdfs上<br>2、怎样实现本地运行？写一个程序，不要带集群的配置文件（本质是你的mr程序的conf中是否有mapreduce.framework.name=local以及yarn.resourcemanager.hostname参数）<br>3、本地模式非常便于进行业务逻辑的debug，<br>集群运行模式：<br>1、将mapreduce程序提交给yarn集群resourcemanager，分发到很多的节点上并发执行<br>2、处理的数据和输出结果应该位于hdfs文件系统<br>3、提交集群的实现步骤：<br>A、将程序打成JAR包，然后在集群的任意一个节点上用hadoop命令启动<br>     $ hadoop jar wordcount.jar cn.itcast.bigdata.mrsimple.WordCountDriver inputpath outputpath<br>B、直接在linux的eclipse中运行main方法<br>（项目中要带参数：mapreduce.framework.name=yarn以及yarn的两个基本配置）<br>C、如果要在windows的eclipse中提交job给集群，则要修改YarnRunner类<br>参考链接<a href="http://www.flyne.org/article/1133" target="_blank" rel="external">http://www.flyne.org/article/1133</a></p>
-<h2 id="三、MR在YARN上的运行全流程"><a href="#三、MR在YARN上的运行全流程" class="headerlink" title="三、MR在YARN上的运行全流程"></a>三、MR在YARN上的运行全流程</h2><p>Yarn是一个资源调度平台，负责为运算程序提供服务器运算资源，相当于一个分布式的操作系统平台，而mapreduce等运算程序则相当于运行于操作系统之上的应用程序。<br>1、    yarn并不清楚用户提交的程序的运行机制<br>2、    yarn只提供运算资源的调度（用户程序向yarn申请资源，yarn就负责分配资源）<br>3、    yarn中的主管角色叫ResourceManager<br>4、    yarn中具体提供运算资源的角色叫NodeManager<br>这样一来，yarn其实就与运行的用户程序完全解耦，就意味着yarn上可以运行各种类型的分布式运算程序（mapreduce只是其中的一种），比如mapreduce、storm程序，spark程序，Tez，只要各种程序实现AppMaster接口即可。<br>下图为Yarn实现MR程序在集群上的资源调度过程：<br><img src="/images/mrYarn.png" alt="" title="mrYarn"></p>
-<h2 id="四、MR程序运行机制与shuffle"><a href="#四、MR程序运行机制与shuffle" class="headerlink" title="四、MR程序运行机制与shuffle"></a>四、MR程序运行机制与shuffle</h2><h3 id="MR运行流程"><a href="#MR运行流程" class="headerlink" title="MR运行流程"></a>MR运行流程</h3><p><img src="/images/mrlc.png" alt="" title="mr运行流程"><br>详细流程：<br>1、    maptask收集我们的map()方法输出的kv对，放到内存缓冲区中<br>2、    从内存缓冲区不断溢出本地磁盘文件，可能会溢出多个文件<br>3、    多个溢出文件会被合并成大的溢出文件<br>4、    在溢出过程中，及合并的过程中，都要调用partitoner进行分组和针对key进行排序<br>5、    reducetask根据自己的分区号，去各个maptask机器上取相应的结果分区数据<br>6、    reducetask会取到同一个分区的来自不同maptask的结果文件，reducetask会将这些文件再进行合并（归并排序）<br>7、    合并成大文件后，shuffle的过程也就结束了，后面进入reducetask的逻辑运算过程（从文件中取出一个一个的键值对group，调用用户自定义的reduce()方法）</p>
-<p>Shuffle中的缓冲区大小会影响到mapreduce程序的执行效率，原则上说，缓冲区越大，磁盘io的次数越少，执行速度就越快<br>缓冲区的大小可以通过参数调整,  参数：io.sort.mb  默认100M</p>
-<h3 id="shuffle"><a href="#shuffle" class="headerlink" title="shuffle"></a>shuffle</h3><p>mapreduce中，map阶段处理的数据如何传递给reduce阶段，是mapreduce框架中最关键的一个流程，这个流程就叫shuffle；<br>shuffle: 洗牌、发牌——（核心机制：数据分区，排序，缓存）；<br>具体来说：就是将maptask输出的处理结果数据，分发给reducetask，并在分发的过程中，对数据按key进行了分区和排序。<br>shuffle是MR处理流程中的一个过程，它的每一个处理步骤是分散在各个map task和reduce task节点上完成的，整体来看，分为3个操作：<br>1.分区partition<br>2.Sort根据key排序<br>3.Combiner进行局部value的合并<br>在接下来的文章中将通过具体的实战去具体体现三个操作的作用<br><a href="www.baidu.com">链接1</a> <a href="%E9%93%BE%E6%8E%A52">链接2</a> <a href="www.baidu.com">链接3</a> </p>
-<h2 id="五、MapTask并行度决定机制与切片"><a href="#五、MapTask并行度决定机制与切片" class="headerlink" title="五、MapTask并行度决定机制与切片"></a>五、MapTask并行度决定机制与切片</h2><h3 id="MapTask并行度决定机制"><a href="#MapTask并行度决定机制" class="headerlink" title="MapTask并行度决定机制"></a>MapTask并行度决定机制</h3><p>一个job的map阶段并行度由客户端在提交job时决定<br>而客户端对map阶段并行度的规划的基本逻辑为：<br>将待处理数据执行逻辑切片（即按照一个特定切片大小，将待处理数据划分成逻辑上的多个split），然后每一个split分配一个mapTask并行实例处理<br>这段逻辑及形成的切片规划描述文件，由FileInputFormat实现类的getSplits()方法完成。</p>
-<h3 id="FileInputFormat切片机制"><a href="#FileInputFormat切片机制" class="headerlink" title="FileInputFormat切片机制"></a>FileInputFormat切片机制</h3><p>a)    简单地按照文件的内容长度进行切片<br>b)    切片大小，默认等于block大小<br>c)    切片时不考虑数据集整体，而是逐个针对每一个文件单独切片<br>默认情况下，切片大小=blocksize，但是，不论怎么调参数，都不能让多个小文件“划入”一个split。<br>选择并发数的影响因素：<br>运算节点的硬件配置<br>运算任务的类型：CPU密集型还是IO密集型<br>运算任务的数据量<br><img src="/images/mrsplit.png" alt="" title="mrsplit"></p>
-<h3 id="map并行度的经验"><a href="#map并行度的经验" class="headerlink" title="map并行度的经验"></a>map并行度的经验</h3><p>如果硬件配置为2*12core + 64G，恰当的map并行度是大约每个节点20-100个map，最好每个maptask的执行时间至少一分钟。<br>如果job的每个map或者 reduce task的运行时间都只有30-40秒钟，那么就减少该job的map或者reduce数，每一个task(map|reduce)的setup和加入到调度器中进行调度，这个中间的过程可能都要花费几秒钟，所以如果每个task都非常快就跑完了，就会在task的开始和结束的时候浪费太多的时间。<br>配置task的JVM重用可以改善该问题：<br>（mapred.job.reuse.jvm.num.tasks，默认是1，表示一个JVM上最多可以顺序执行的task数目（属于同一个Job）是1。也就是说一个task启一个JVM）</p>
-<p>如果input的文件非常的大，比如一个文件2G，同时，机器性能又比较好，那么，可以考虑将hdfs上的每个block size设大，比如设成256MB或者512MB<br>\&lt;所谓经验，是在特定数据、特定机器配置、特定业务逻辑场景下，试出来的></p>
-<h2 id="六、ReduceTask并行度的决定"><a href="#六、ReduceTask并行度的决定" class="headerlink" title="六、ReduceTask并行度的决定"></a>六、ReduceTask并行度的决定</h2><p>reducetask的并行度同样影响整个job的执行并发度和执行效率，但与maptask的并发数由切片数决定不同，Reducetask数量的决定是可以直接手动设置：</p>
-<p>//默认值是1，手动设置为4<br>job.setNumReduceTasks(4);</p>
-<p>如果数据分布不均匀，就有可能在reduce阶段产生数据倾斜<br>注意： reducetask数量并不是任意设置，还要考虑业务逻辑需求，有些情况下，需要计算全局汇总结果，就只能有1个reducetask</p>
-<p>尽量不要运行太多的reduce task。对大多数job来说，最好rduce的个数最多和集群中的reduce持平，或者比集群的 reduce slots小。这个对于小集群而言，尤其重要。</p>
 ]]></content>
     </entry>
     
@@ -3209,28 +3231,6 @@ return movie + &quot;\t&quot; + rate + &quot;\t&quot; + timeStamp + &quot;\t&quo
     group by A.username,A.month
     order by A.username,A.month;
 </code></pre>]]></content>
-    </entry>
-    
-    <entry>
-      <title><![CDATA[Hadoop2.x——MR参数优化]]></title>
-      <url>http://spark8.tech/2015/10/14/mrziyuanyouhua/</url>
-      <content type="html"><![CDATA[<a id="more"></a>
-<h2 id="1-资源相关参数"><a href="#1-资源相关参数" class="headerlink" title="1.  资源相关参数"></a>1.  资源相关参数</h2><p>以下参数是在用户自己的mr应用程序中配置就可以生效</p>
-<blockquote>
-<p>(1) mapreduce.map.memory.mb: 一个Map Task可使用的资源上限（单位:MB），默认为1024。如果Map Task实际使用的资源量超过该值，则会被强制杀死。<br>(2) mapreduce.reduce.memory.mb: 一个Reduce Task可使用的资源上限（单位:MB），默认为1024。如果Reduce Task实际使用的资源量超过该值，则会被强制杀死。<br>(3) mapreduce.map.java.opts: Map Task的JVM参数，你可以在此配置默认的java heap size等参数, e.g.“-Xmx1024m -verbose:gc -Xloggc:/tmp/@taskid@.gc” （@taskid@会被Hadoop框架自动换为相应的taskid）, 默认值: “”<br>(4) mapreduce.reduce.java.opts: Reduce Task的JVM参数，你可以在此配置默认的java heap size等参数, e.g.“-Xmx1024m -verbose:gc -Xloggc:/tmp/@taskid@.gc”, 默认值: “”<br>(5) mapreduce.map.cpu.vcores: 每个Map task可使用的最多cpu core数目, 默认值: 1<br>(6) mapreduce.reduce.cpu.vcores: 每个Reduce task可使用的最多cpu core数目, 默认值: 1</p>
-</blockquote>
-<p>//应该在yarn启动之前就配置在服务器的配置文件中才能生效</p>
-<blockquote>
-<p>(7) yarn.scheduler.minimum-allocation-mb      1024   给应用程序container分配的最小内存<br>(8) yarn.scheduler.maximum-allocation-mb      8192    给应用程序container分配的最大内存<br>(9) yarn.scheduler.minimum-allocation-vcores    1<br>(10)yarn.scheduler.maximum-allocation-vcores    32<br>(11)yarn.nodemanager.resource.memory-mb   8192  </p>
-</blockquote>
-<p>//shuffle性能优化的关键参数，应在yarn启动之前就配置好</p>
-<blockquote>
-<p>(12)mapreduce.task.io.sort.mb   100         //shuffle的环形缓冲区大小，默认100m<br>(13)mapreduce.map.sort.spill.percent   0.8    //环形缓冲区溢出的阈值，默认80%</p>
-<h2 id="2-容错相关参数"><a href="#2-容错相关参数" class="headerlink" title="2. 容错相关参数"></a>2. 容错相关参数</h2><p>(1) mapreduce.map.maxattempts: 每个Map Task最大重试次数，一旦重试参数超过该值，则认为Map Task运行失败，默认值：4。<br>(2) mapreduce.reduce.maxattempts: 每个Reduce Task最大重试次数，一旦重试参数超过该值，则认为Map Task运行失败，默认值：4。<br>(3) mapreduce.map.failures.maxpercent: 当失败的Map Task失败比例超过该值为，整个作业则失败，默认值为0. 如果你的应用程序允许丢弃部分输入数据，则该该值设为一个大于0的值，比如5，表示如果有低于5%的Map Task失败（如果一个Map Task重试次数超过mapreduce.map.maxattempts，则认为这个Map Task失败，其对应的输入数据将不会产生任何结果），整个作业扔认为成功。<br>(4) mapreduce.reduce.failures.maxpercent: 当失败的Reduce Task失败比例超过该值为，整个作业则失败，默认值为0.<br>(5) mapreduce.task.timeout: Task超时时间，经常需要设置的一个参数，该参数表达的意思为：如果一个task在一定时间内没有任何进入，即不会读取新的数据，也没有输出数据，则认为该task处于block状态，可能是卡住了，也许永远会卡主，为了防止因为用户程序永远block住不退出，则强制设置了一个该超时时间（单位毫秒），默认是300000。如果你的程序对每条输入数据的处理时间过长（比如会访问数据库，通过网络拉取数据等），建议将该参数调大，该参数过小常出现的错误提示  是“AttemptID:attempt_14267829456721_123456_m_000224_0 Timed out after 300 secsContainer killed by the ApplicationMaster.”。</p>
-<h2 id="3-本地运行mapreduce-作业"><a href="#3-本地运行mapreduce-作业" class="headerlink" title="3.  本地运行mapreduce 作业"></a>3.  本地运行mapreduce 作业</h2><p>设置以下几个参数:<br>mapreduce.framework.name=local<br>mapreduce.jobtracker.address=local<br>fs.defaultFS=local</p>
-<h2 id="4-效率和稳定性相关参数"><a href="#4-效率和稳定性相关参数" class="headerlink" title="4. 效率和稳定性相关参数"></a>4. 效率和稳定性相关参数</h2><p>(1) mapreduce.map.speculative: 是否为Map Task打开推测执行机制，默认为false<br>(2) mapreduce.reduce.speculative: 是否为Reduce Task打开推测执行机制，默认为false<br>(3) mapreduce.job.user.classpath.first &amp; mapreduce.task.classpath.user.precedence：当同一个class同时出现在用户jar包和hadoop jar中时，优先使用哪个jar包中的class，默认为false，表示优先使用hadoop jar中的class。<br>(4) mapreduce.input.fileinputformat.split.minsize: FileInputFormat做切片时的最小切片大小，(5)mapreduce.input.fileinputformat.split.maxsize:  FileInputFormat做切片时的最大切片大小 (切片的默认大小就等于blocksize，即 134217728) </p>
-</blockquote>
-]]></content>
     </entry>
     
   
