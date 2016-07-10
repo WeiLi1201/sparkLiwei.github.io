@@ -2,6 +2,69 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   
   <url>
+    <loc>http://spark8.tech/2016/06/23/hivejilian/</loc>
+    
+    <lastmod>2016-07-10T10:58:51.000Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://spark8.tech/2016/06/23/udf/</loc>
+    
+    <lastmod>2016-07-10T10:58:39.000Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://spark8.tech/2015/06/23/transform/</loc>
+    
+    <lastmod>2016-07-10T10:58:26.000Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://spark8.tech/2015/06/23/flumerizhi/</loc>
+    
+    <lastmod>2016-07-10T10:58:17.000Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://spark8.tech/2016/06/23/flumetuomin/</loc>
+    
+    <lastmod>2016-07-10T10:58:08.000Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://spark8.tech/2015/06/23/hdfs/</loc>
+    
+    <lastmod>2016-07-10T10:57:53.000Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://spark8.tech/2016/06/23/zkyuanli/</loc>
+    
+    <lastmod>2016-07-10T10:57:44.000Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://spark8.tech/2016/06/23/zkfbss/</loc>
+    
+    <lastmod>2016-07-10T10:57:38.000Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://spark8.tech/2016/06/23/zkfbs/</loc>
+    
+    <lastmod>2016-07-10T10:57:29.000Z</lastmod>
+    
+  </url>
+  
+  <url>
     <loc>http://spark8.tech/2016/06/22/mapreduce/</loc>
     
     <lastmod>2016-07-06T13:25:38.000Z</lastmod>
@@ -93,55 +156,6 @@
   </url>
   
   <url>
-    <loc>http://spark8.tech/2015/10/18/hivejilian/</loc>
-    
-    <lastmod>2016-07-03T12:39:46.000Z</lastmod>
-    
-  </url>
-  
-  <url>
-    <loc>http://spark8.tech/2015/10/19/udf/</loc>
-    
-    <lastmod>2016-07-03T12:38:27.000Z</lastmod>
-    
-  </url>
-  
-  <url>
-    <loc>http://spark8.tech/2015/10/24/flumerizhi/</loc>
-    
-    <lastmod>2016-07-03T12:36:01.000Z</lastmod>
-    
-  </url>
-  
-  <url>
-    <loc>http://spark8.tech/2015/10/28/flumetuomin/</loc>
-    
-    <lastmod>2016-07-03T12:35:08.000Z</lastmod>
-    
-  </url>
-  
-  <url>
-    <loc>http://spark8.tech/2015/11/11/hdfs/</loc>
-    
-    <lastmod>2016-07-03T12:33:44.000Z</lastmod>
-    
-  </url>
-  
-  <url>
-    <loc>http://spark8.tech/2016/03/11/zkfbss/</loc>
-    
-    <lastmod>2016-07-03T12:26:14.000Z</lastmod>
-    
-  </url>
-  
-  <url>
-    <loc>http://spark8.tech/2016/03/11/zkfbs/</loc>
-    
-    <lastmod>2016-07-03T12:24:51.000Z</lastmod>
-    
-  </url>
-  
-  <url>
     <loc>http://spark8.tech/2016/05/12/easyrpc2/</loc>
     
     <lastmod>2016-07-03T12:22:41.000Z</lastmod>
@@ -194,20 +208,6 @@
     <loc>http://spark8.tech/2016/06/18/scalayszh/</loc>
     
     <lastmod>2016-07-03T11:17:03.000Z</lastmod>
-    
-  </url>
-  
-  <url>
-    <loc>http://spark8.tech/2015/10/20/transform/</loc>
-    
-    <lastmod>2016-06-25T12:00:27.000Z</lastmod>
-    
-  </url>
-  
-  <url>
-    <loc>http://spark8.tech/2016/03/11/zkyuanli/</loc>
-    
-    <lastmod>2016-06-24T16:33:03.000Z</lastmod>
     
   </url>
   

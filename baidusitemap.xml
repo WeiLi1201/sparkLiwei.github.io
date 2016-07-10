@@ -4,6 +4,198 @@
 
     
   <url>
+    <loc>http://spark8.tech/2016/06/23/hivejilian/</loc>
+    <lastmod>2016-07-10T10:58:51.000Z</lastmod>
+    <data>
+        <display>
+        <title>Hive——级联求和accumulate</title>
+        <pubTime>2016-06-23T04:12:12.000Z</pubTime>
+        
+        <tag>hadoop</tag>
+         
+        <tag>hive</tag>
+         
+         
+           
+             
+              <breadCrumb title="hadoop" url="http://spark8.tech/categories/hadoop/"/>
+          
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
+    <loc>http://spark8.tech/2016/06/23/udf/</loc>
+    <lastmod>2016-07-10T10:58:39.000Z</lastmod>
+    <data>
+        <display>
+        <title>Hive ——内置函数与UDF实现</title>
+        <pubTime>2016-06-23T08:12:12.000Z</pubTime>
+        
+        <tag>hadoop</tag>
+         
+        <tag>hive</tag>
+         
+         
+           
+             
+              <breadCrumb title="hadoop" url="http://spark8.tech/categories/hadoop/"/>
+          
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
+    <loc>http://spark8.tech/2015/06/23/transform/</loc>
+    <lastmod>2016-07-10T10:58:26.000Z</lastmod>
+    <data>
+        <display>
+        <title>Hive——transform</title>
+        <pubTime>2015-06-23T08:12:12.000Z</pubTime>
+        
+        <tag>hadoop</tag>
+         
+        <tag>hive</tag>
+         
+         
+           
+             
+              <breadCrumb title="hadoop" url="http://spark8.tech/categories/hadoop/"/>
+          
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
+    <loc>http://spark8.tech/2015/06/23/flumerizhi/</loc>
+    <lastmod>2016-07-10T10:58:17.000Z</lastmod>
+    <data>
+        <display>
+        <title>Flume——日志采集与汇总</title>
+        <pubTime>2015-06-23T13:12:12.000Z</pubTime>
+        
+        <tag>hadoop</tag>
+         
+        <tag>flume</tag>
+         
+         
+           
+             
+              <breadCrumb title="hadoop" url="http://spark8.tech/categories/hadoop/"/>
+          
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
+    <loc>http://spark8.tech/2016/06/23/flumetuomin/</loc>
+    <lastmod>2016-07-10T10:58:08.000Z</lastmod>
+    <data>
+        <display>
+        <title>Flume——自定义拦截器(脱敏处理)</title>
+        <pubTime>2016-06-23T13:15:12.000Z</pubTime>
+        
+        <tag>hadoop</tag>
+         
+        <tag>flume</tag>
+         
+         
+           
+             
+              <breadCrumb title="hadoop" url="http://spark8.tech/categories/hadoop/"/>
+          
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
+    <loc>http://spark8.tech/2015/06/23/hdfs/</loc>
+    <lastmod>2016-07-10T10:57:53.000Z</lastmod>
+    <data>
+        <display>
+        <title>Hadoop2.x——关于HDFS一些有意思的总结</title>
+        <pubTime>2015-06-23T15:12:12.000Z</pubTime>
+        
+        <tag>hadoop</tag>
+         
+        <tag>HDFS</tag>
+         
+         
+           
+             
+              <breadCrumb title="hadoop" url="http://spark8.tech/categories/hadoop/"/>
+          
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
+    <loc>http://spark8.tech/2016/06/23/zkyuanli/</loc>
+    <lastmod>2016-07-10T10:57:44.000Z</lastmod>
+    <data>
+        <display>
+        <title>Zookeeper-原理补充</title>
+        <pubTime>2016-06-23T05:25:22.000Z</pubTime>
+        
+        <tag>zookeeper</tag>
+         
+         
+           
+             
+              <breadCrumb title="zookeeper" url="http://spark8.tech/categories/zookeeper/"/>
+          
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
+    <loc>http://spark8.tech/2016/06/23/zkfbss/</loc>
+    <lastmod>2016-07-10T10:57:38.000Z</lastmod>
+    <data>
+        <display>
+        <title>Zookeeper-分布式共享锁</title>
+        <pubTime>2016-06-23T08:25:22.000Z</pubTime>
+        
+        <tag>zookeeper</tag>
+         
+         
+           
+             
+              <breadCrumb title="zookeeper" url="http://spark8.tech/categories/zookeeper/"/>
+          
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
+    <loc>http://spark8.tech/2016/06/23/zkfbs/</loc>
+    <lastmod>2016-07-10T10:57:29.000Z</lastmod>
+    <data>
+        <display>
+        <title>Zookeeper-服务器上下线动态感知</title>
+        <pubTime>2016-06-23T08:25:22.000Z</pubTime>
+        
+        <tag>zookeeper</tag>
+         
+         
+           
+             
+              <breadCrumb title="zookeeper" url="http://spark8.tech/categories/zookeeper/"/>
+          
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
     <loc>http://spark8.tech/2016/06/22/mapreduce/</loc>
     <lastmod>2016-07-06T13:25:38.000Z</lastmod>
     <data>
@@ -282,156 +474,6 @@
 
     
   <url>
-    <loc>http://spark8.tech/2015/10/18/hivejilian/</loc>
-    <lastmod>2016-07-03T12:39:46.000Z</lastmod>
-    <data>
-        <display>
-        <title>Hive——级联求和accumulate</title>
-        <pubTime>2015-10-18T04:12:12.000Z</pubTime>
-        
-        <tag>hadoop</tag>
-         
-        <tag>hive</tag>
-         
-         
-           
-             
-              <breadCrumb title="hadoop" url="http://spark8.tech/categories/hadoop/"/>
-          
-        </display>
-    </data>
-    </url>
-
-    
-  <url>
-    <loc>http://spark8.tech/2015/10/19/udf/</loc>
-    <lastmod>2016-07-03T12:38:27.000Z</lastmod>
-    <data>
-        <display>
-        <title>Hive ——内置函数与UDF实现</title>
-        <pubTime>2015-10-19T08:12:12.000Z</pubTime>
-        
-        <tag>hadoop</tag>
-         
-        <tag>hive</tag>
-         
-         
-           
-             
-              <breadCrumb title="hadoop" url="http://spark8.tech/categories/hadoop/"/>
-          
-        </display>
-    </data>
-    </url>
-
-    
-  <url>
-    <loc>http://spark8.tech/2015/10/24/flumerizhi/</loc>
-    <lastmod>2016-07-03T12:36:01.000Z</lastmod>
-    <data>
-        <display>
-        <title>Flume——日志采集与汇总</title>
-        <pubTime>2015-10-24T13:12:12.000Z</pubTime>
-        
-        <tag>hadoop</tag>
-         
-        <tag>flume</tag>
-         
-         
-           
-             
-              <breadCrumb title="hadoop" url="http://spark8.tech/categories/hadoop/"/>
-          
-        </display>
-    </data>
-    </url>
-
-    
-  <url>
-    <loc>http://spark8.tech/2015/10/28/flumetuomin/</loc>
-    <lastmod>2016-07-03T12:35:08.000Z</lastmod>
-    <data>
-        <display>
-        <title>Flume——自定义拦截器(脱敏处理)</title>
-        <pubTime>2015-10-28T13:15:12.000Z</pubTime>
-        
-        <tag>hadoop</tag>
-         
-        <tag>flume</tag>
-         
-         
-           
-             
-              <breadCrumb title="hadoop" url="http://spark8.tech/categories/hadoop/"/>
-          
-        </display>
-    </data>
-    </url>
-
-    
-  <url>
-    <loc>http://spark8.tech/2015/11/11/hdfs/</loc>
-    <lastmod>2016-07-03T12:33:44.000Z</lastmod>
-    <data>
-        <display>
-        <title>Hadoop2.x——关于HDFS一些有意思的总结</title>
-        <pubTime>2015-11-11T15:12:12.000Z</pubTime>
-        
-        <tag>hadoop</tag>
-         
-        <tag>HDFS</tag>
-         
-         
-           
-             
-              <breadCrumb title="hadoop" url="http://spark8.tech/categories/hadoop/"/>
-          
-        </display>
-    </data>
-    </url>
-
-    
-  <url>
-    <loc>http://spark8.tech/2016/03/11/zkfbss/</loc>
-    <lastmod>2016-07-03T12:26:14.000Z</lastmod>
-    <data>
-        <display>
-        <title>Zookeeper-分布式共享锁</title>
-        <pubTime>2016-03-11T08:25:22.000Z</pubTime>
-        
-        <tag>zookeeper</tag>
-         
-         
-           
-             
-              <breadCrumb title="zookeeper" url="http://spark8.tech/categories/zookeeper/"/>
-          
-        </display>
-    </data>
-    </url>
-
-    
-  <url>
-    <loc>http://spark8.tech/2016/03/11/zkfbs/</loc>
-    <lastmod>2016-07-03T12:24:51.000Z</lastmod>
-    <data>
-        <display>
-        <title>Zookeeper-服务器上下线动态感知</title>
-        <pubTime>2016-03-11T08:25:22.000Z</pubTime>
-        
-        <tag>zookeeper</tag>
-         
-         
-           
-             
-              <breadCrumb title="zookeeper" url="http://spark8.tech/categories/zookeeper/"/>
-          
-        </display>
-    </data>
-    </url>
-
-    
-  <url>
     <loc>http://spark8.tech/2016/05/12/easyrpc2/</loc>
     <lastmod>2016-07-03T12:22:41.000Z</lastmod>
     <data>
@@ -593,48 +635,6 @@
            
              
               <breadCrumb title="scala" url="http://spark8.tech/categories/scala/"/>
-          
-        </display>
-    </data>
-    </url>
-
-    
-  <url>
-    <loc>http://spark8.tech/2015/10/20/transform/</loc>
-    <lastmod>2016-06-25T12:00:27.000Z</lastmod>
-    <data>
-        <display>
-        <title>Hive——transform</title>
-        <pubTime>2015-10-20T08:12:12.000Z</pubTime>
-        
-        <tag>hadoop</tag>
-         
-        <tag>hive</tag>
-         
-         
-           
-             
-              <breadCrumb title="hadoop" url="http://spark8.tech/categories/hadoop/"/>
-          
-        </display>
-    </data>
-    </url>
-
-    
-  <url>
-    <loc>http://spark8.tech/2016/03/11/zkyuanli/</loc>
-    <lastmod>2016-06-24T16:33:03.000Z</lastmod>
-    <data>
-        <display>
-        <title>Zookeeper-原理补充</title>
-        <pubTime>2016-03-11T05:25:22.000Z</pubTime>
-        
-        <tag>zookeeper</tag>
-         
-         
-           
-             
-              <breadCrumb title="zookeeper" url="http://spark8.tech/categories/zookeeper/"/>
           
         </display>
     </data>

@@ -4,21 +4,836 @@
   
     
     <entry>
-      <title><![CDATA[Hadoop2.x——左连接]]></title>
-      <url>http://spark8.tech/2016/06/22/hadoopzlj/</url>
+      <title><![CDATA[Flume——自定义拦截器(脱敏处理)]]></title>
+      <url>http://spark8.tech/2016/06/23/flumetuomin/</url>
       <content type="html"><![CDATA[<a id="more"></a>
-<h2 id="需求描述"><a href="#需求描述" class="headerlink" title="需求描述"></a>需求描述</h2><p>有两张表，关联字段为pid，订单表中没有商品名称，需要对数据进行补全，使用MapReduce思想，进行编程。</p>
+<h2 id="需求描述"><a href="#需求描述" class="headerlink" title="需求描述"></a>需求描述</h2><p>有源数据<br><img src="/images/flumewtm.png" alt="" title="flumewtm"><br>要求进行脱敏处理，第1列手机号加密传输，再取2、4、6、7列数据</p>
+<h2 id="设计思路"><a href="#设计思路" class="headerlink" title="设计思路"></a>设计思路</h2><p>自定义Flume拦截器，过滤掉不需要的字段，并对指定字段加密处理，将源数据进行预处理。减少数据传输量，降低存储开销。<br>技术方案核心包括二部分：</p>
+<ol>
+<li>编写java代码，自定义拦截器；</li>
+<li>修改Flume的配置信息<h2 id="代码实现"><a href="#代码实现" class="headerlink" title="代码实现"></a>代码实现</h2><h3 id="第一部分"><a href="#第一部分" class="headerlink" title="第一部分"></a>第一部分</h3></li>
+<li>定义一个类CustomParameterInterceptor实现Interceptor接口。</li>
+<li>在CustomParameterInterceptor类中定义变量，这些变量是需要到 Flume的配置文件中进行配置使用的。每一行字段间的分隔符(fields_separator)、通过分隔符分隔后，所需要列字段的下标（indexs）、多个下标使用的分隔符（indexs_separator)、多个下标使用的分隔符（indexs_separator)。</li>
+<li>添加CustomParameterInterceptor的有参构造方法。并对相应的变量进行处理。将配置文件中传过来的unicode编码进行转换为字符串。</li>
+<li>写具体的要处理的逻辑intercept()方法，一个是单个处理的，一个是批量处理。</li>
+<li>接口中定义了一个内部接口Builder，在configure方法中，进行一些参数配置。并给出，在flume的conf中没配置一些参数时，给出其默认值。通过其builder方法，返回一个CustomParameterInterceptor对象。</li>
+<li><p>定义一个静态类，类中封装MD5加密方法<br>通过以上步骤，自定义拦截器的代码开发已完成，然后打包成jar， 放到Flume的根目录下的lib中</p>
+<pre><code>package cn.holley.interceptor;
+
+import static cn.holley.interceptor.CustomParameterInterceptor.Constants.FIELD_SEPARATOR;
+import static cn.holley.interceptor.CustomParameterInterceptor.Constants.DEFAULT_FIELD_SEPARATOR;
+import static cn.holley.interceptor.CustomParameterInterceptor.Constants.INDEXS;
+import static cn.holley.interceptor.CustomParameterInterceptor.Constants.DEFAULT_INDEXS;
+import static cn.holley.interceptor.CustomParameterInterceptor.Constants.INDEXS_SEPARATOR;
+import static cn.holley.interceptor.CustomParameterInterceptor.Constants.DEFAULT_INDEXS_SEPARATOR;
+import static cn.holley.interceptor.CustomParameterInterceptor.Constants.ENCRYPTED_FIELD_INDEX;
+import static cn.holley.interceptor.CustomParameterInterceptor.Constants.DEFAULT_ENCRYPTED_FIELD_INDEX;
+
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import org.apache.flume.Context;
+import org.apache.flume.Event;
+import org.apache.flume.interceptor.Interceptor;
+import org.junit.Test;
+
+import com.google.common.base.Charsets;
+
+/**
+ *
+ */
+public class CustomParameterInterceptor  implements Interceptor{    
+
+    /** The field_separator.指明每一行字段的分隔符 */
+    private final String fields_separator;
+
+    /** The indexs.通过分隔符分割后，指明需要那列的字段 下标*/
+    private final String indexs;
+
+    /** The indexs_separator. 多个下标的分隔符*/
+    private final String indexs_separator;
+
+/**
+ * 
+ * @param regex
+ * @param field_separator
+ * @param indexs
+ * @param indexs_separator
+ */
+public CustomParameterInterceptor( String fields_separator,
+        String indexs, String indexs_separator,String encrypted_field_index) {
+    String f = fields_separator.trim();
+    String i = indexs_separator.trim();
+    this.indexs = indexs;
+    this.encrypted_field_index=encrypted_field_index.trim();
+    if (!f.equals(&quot;&quot;)) {
+        f = UnicodeToString(f);
+    }
+    this.fields_separator =f;
+    if (!i.equals(&quot;&quot;)) {
+        i = UnicodeToString(i);
+    }
+    this.indexs_separator = i;
+}
+
+/*
+ * 
+ * \t 制表符 (&apos;\u0009&apos;) \n 新行（换行）符 (&apos; &apos;) \r 回车符 (&apos; &apos;) \f 换页符 (&apos;\u000C&apos;) \a 报警
+ * (bell) 符 (&apos;\u0007&apos;) \e 转义符 (&apos;\u001B&apos;) \cx  空格(\u0020)对应于 x 的控制符
+ * 
+ * @param str
+ * @return
+ * @data:2015-6-30
+ */
+
+/** The encrypted_field_index. 需要加密的字段下标*/
+private final String encrypted_field_index;
+</code></pre></li>
+</ol>
+<pre><code>public static String UnicodeToString(String str) {
+    Pattern pattern = Pattern.compile(&quot;(\\\\u(\\p{XDigit}{4}))&quot;);
+    Matcher matcher = pattern.matcher(str);
+    char ch;
+    while (matcher.find()) {
+        ch = (char) Integer.parseInt(matcher.group(2), 16);
+        str = str.replace(matcher.group(1), ch + &quot;&quot;);
+    }
+    return str;
+}
+
+/*
+ * @see org.apache.flume.interceptor.Interceptor#intercept(org.apache.flume.Event)
+ * 单个event拦截逻辑
+ */
+@Override
+public Event intercept(Event event) {
+    if (event == null) {
+        return null;
+    }        
+    try {
+        String line = new String(event.getBody(), Charsets.UTF_8);
+        String[] fields_spilts = line.split(fields_separator);
+        String[] indexs_split = indexs.split(indexs_separator);
+        String newLine=&quot;&quot;;
+        for (int i = 0; i &lt; indexs_split.length; i++) {
+            int parseInt = Integer.parseInt(indexs_split[i]);    
+            //对加密字段进行加密
+            if(!&quot;&quot;.equals(encrypted_field_index)&amp;&amp;encrypted_field_index.equals(indexs_split[i])){
+                newLine+=StringUtils.GetMD5Code(fields_spilts[parseInt]);                
+            }else{                    
+                newLine+=fields_spilts[parseInt];
+            }
+
+            if(i!=indexs_split.length-1){
+                newLine+=fields_separator;
+            }
+        }            
+        event.setBody(newLine.getBytes(Charsets.UTF_8));
+        return event;
+    } catch (Exception e) {
+        return event;
+    }        
+}
+
+/* 
+ * @see org.apache.flume.interceptor.Interceptor#intercept(java.util.List)
+ * 批量event拦截逻辑
+ */
+@Override
+public List&lt;Event&gt; intercept(List&lt;Event&gt; events) {
+    List&lt;Event&gt; out = new ArrayList&lt;Event&gt;();
+    for (Event event : events) {
+        Event outEvent = intercept(event);
+        if (outEvent != null) {
+            out.add(outEvent);
+        }
+    }
+    return out;
+}
+
+/* 
+ * @see org.apache.flume.interceptor.Interceptor#initialize()
+ */
+@Override
+public void initialize() {
+    // TODO Auto-generated method stub
+
+}
+
+/*
+ * @see org.apache.flume.interceptor.Interceptor#close()
+ */
+@Override
+public void close() {
+    // TODO Auto-generated method stub
+
+}
+
+
+/**
+ * 相当于自定义Interceptor的工厂类
+ * 在flume采集配置文件中通过制定该Builder来创建Interceptor对象
+ * 可以在Builder中获取、解析flume采集配置文件中的拦截器Interceptor的自定义参数：
+ * 字段分隔符，字段下标，下标分隔符、加密字段下标 ...等
+ * @author
+ *
+ */
+public static class Builder implements Interceptor.Builder {
+
+    /** The fields_separator.指明每一行字段的分隔符 */
+    private  String fields_separator;
+
+    /** The indexs.通过分隔符分割后，指明需要那列的字段 下标*/
+    private  String indexs;
+
+    /** The indexs_separator. 多个下标下标的分隔符*/
+    private  String indexs_separator;
+
+    /** The encrypted_field. 需要加密的字段下标*/
+    private  String encrypted_field_index; 
+
+    /* 
+     * @see org.apache.flume.conf.Configurable#configure(org.apache.flume.Context)
+     */
+    @Override
+    public void configure(Context context) {
+        fields_separator = context.getString(FIELD_SEPARATOR, DEFAULT_FIELD_SEPARATOR);
+        indexs = context.getString(INDEXS, DEFAULT_INDEXS);
+        indexs_separator = context.getString(INDEXS_SEPARATOR, DEFAULT_INDEXS_SEPARATOR);
+        encrypted_field_index= context.getString(ENCRYPTED_FIELD_INDEX, DEFAULT_ENCRYPTED_FIELD_INDEX);
+
+    }
+
+    /* 
+     * @see org.apache.flume.interceptor.Interceptor.Builder#build()
+     */
+    @Override
+    public Interceptor build() {
+
+        return new CustomParameterInterceptor(fields_separator, indexs, indexs_separator,encrypted_field_index);
+    }
+}    
+
+
+/**
+ * 常量
+ *
+ */
+public static class Constants {
+    /** The Constant FIELD_SEPARATOR. */
+    public static final String FIELD_SEPARATOR = &quot;fields_separator&quot;;
+
+    /** The Constant DEFAULT_FIELD_SEPARATOR. */
+    public static final String DEFAULT_FIELD_SEPARATOR =&quot; &quot;;
+
+    /** The Constant INDEXS. */
+    public static final String INDEXS = &quot;indexs&quot;;
+
+    /** The Constant DEFAULT_INDEXS. */
+    public static final String DEFAULT_INDEXS = &quot;0&quot;;
+
+    /** The Constant INDEXS_SEPARATOR. */
+    public static final String INDEXS_SEPARATOR = &quot;indexs_separator&quot;;
+
+    /** The Constant DEFAULT_INDEXS_SEPARATOR. */
+    public static final String DEFAULT_INDEXS_SEPARATOR = &quot;,&quot;;
+
+    /** The Constant ENCRYPTED_FIELD_INDEX. */
+    public static final String ENCRYPTED_FIELD_INDEX = &quot;encrypted_field_index&quot;;
+
+    /** The Constant DEFAUL_TENCRYPTED_FIELD_INDEX. */
+    public static final String DEFAULT_ENCRYPTED_FIELD_INDEX = &quot;&quot;;
+
+    /** The Constant PROCESSTIME. */
+    public static final String PROCESSTIME = &quot;processTime&quot;;
+    /** The Constant PROCESSTIME. */
+    public static final String DEFAULT_PROCESSTIME = &quot;a&quot;;
+
+}
+
+
+
+/**
+ * 工具类：字符串md5加密
+ */
+public static class StringUtils {
+       // 全局数组
+    private final static String[] strDigits = { &quot;0&quot;, &quot;1&quot;, &quot;2&quot;, &quot;3&quot;, &quot;4&quot;, &quot;5&quot;,
+            &quot;6&quot;, &quot;7&quot;, &quot;8&quot;, &quot;9&quot;, &quot;a&quot;, &quot;b&quot;, &quot;c&quot;, &quot;d&quot;, &quot;e&quot;, &quot;f&quot; };
+
+    // 返回形式为数字跟字符串
+    private static String byteToArrayString(byte bByte) {
+        int iRet = bByte;
+        // System.out.println(&quot;iRet=&quot;+iRet);
+        if (iRet &lt; 0) {
+            iRet += 256;
+        }
+        int iD1 = iRet / 16;
+        int iD2 = iRet % 16;
+        return strDigits[iD1] + strDigits[iD2];
+    }
+
+    // 返回形式只为数字
+    private static String byteToNum(byte bByte) {
+        int iRet = bByte;
+        System.out.println(&quot;iRet1=&quot; + iRet);
+        if (iRet &lt; 0) {
+            iRet += 256;
+        }
+        return String.valueOf(iRet);
+    }
+
+    // 转换字节数组为16进制字串
+    private static String byteToString(byte[] bByte) {
+        StringBuffer sBuffer = new StringBuffer();
+        for (int i = 0; i &lt; bByte.length; i++) {
+            sBuffer.append(byteToArrayString(bByte[i]));
+        }
+        return sBuffer.toString();
+    }
+
+    public static String GetMD5Code(String strObj) {
+        String resultString = null;
+        try {
+            resultString = new String(strObj);
+            MessageDigest md = MessageDigest.getInstance(&quot;MD5&quot;);
+            // md.digest() 该函数返回值为存放哈希值结果的byte数组
+            resultString = byteToString(md.digest(strObj.getBytes()));
+        } catch (NoSuchAlgorithmException ex) {
+            ex.printStackTrace();
+        }
+        return resultString;
+    }
+    }
+
+}
+</code></pre><h3 id="第二部分"><a href="#第二部分" class="headerlink" title="第二部分"></a>第二部分</h3><p>修改Flume的配置信息<br>        a1.channels = c1<br>        a1.sources = r1<br>        a1.sinks = s1</p>
+<pre><code>channel
+a1.channels.c1.type = memory
+a1.channels.c1.capacity=100000
+a1.channels.c1.transactionCapacity=50000
+
+source
+a1.sources.r1.channels = c1
+a1.sources.r1.type = spooldir
+a1.sources.r1.spoolDir = /home/hadoop/logs/
+a1.sources.r1.batchSize= 50
+a1.sources.r1.inputCharset = UTF-8
+
+a1.sources.r1.interceptors =i1 i2
+a1.sources.r1.interceptors.i1.type =cn.holley.interceptor.CustomParameterInterceptor$Builder
+a1.sources.r1.interceptors.i1.fields_separator=\\u0009
+a1.sources.r1.interceptors.i1.indexs =0,1,3,5,6
+a1.sources.r1.interceptors.i1.indexs_separator =\\u002c
+a1.sources.r1.interceptors.i1.encrypted_field_index =0
+
+a1.sources.r1.interceptors.i2.type = org.apache.flume.interceptor.TimestampInterceptor$Builder
+
+
+sink
+a1.sinks.s1.channel = c1
+a1.sinks.s1.type = hdfs
+a1.sinks.s1.hdfs.path =hdfs://hdp-node-01:9000/flume/%Y%m%d
+a1.sinks.s1.hdfs.filePrefix = event
+a1.sinks.s1.hdfs.fileSuffix = .log
+a1.sinks.s1.hdfs.rollSize = 10485760
+a1.sinks.s1.hdfs.rollInterval =20
+a1.sinks.s1.hdfs.rollCount = 0
+a1.sinks.s1.hdfs.batchSize = 1500
+a1.sinks.s1.hdfs.round = true
+a1.sinks.s1.hdfs.roundUnit = minute
+a1.sinks.s1.hdfs.threadsPoolSize = 25
+a1.sinks.s1.hdfs.useLocalTimeStamp = true
+a1.sinks.s1.hdfs.minBlockReplicas = 1
+a1.sinks.s1.hdfs.fileType =DataStream
+a1.sinks.s1.hdfs.writeFormat = Text
+a1.sinks.s1.hdfs.callTimeout = 60000
+a1.sinks.s1.hdfs.idleTimeout =60
+</code></pre><h2 id="实现效果"><a href="#实现效果" class="headerlink" title="实现效果"></a>实现效果</h2><p><img src="/images/result1.png" alt="" title="result1"><br><img src="/images/result2.png" alt="" title="result2"></p>
+]]></content>
+    </entry>
+    
+    <entry>
+      <title><![CDATA[Zookeeper-分布式共享锁]]></title>
+      <url>http://spark8.tech/2016/06/23/zkfbss/</url>
+      <content type="html"><![CDATA[<a id="more"></a>
+<h2 id="一、需求描述"><a href="#一、需求描述" class="headerlink" title="一、需求描述"></a>一、需求描述</h2><p>  在我们自己的分布式业务系统中，可能会存在某种资源，需要被整个系统的各台服务器共享访问，但是只允许一台服务器同时访问</p>
+<h2 id="二、设计思路"><a href="#二、设计思路" class="headerlink" title="二、设计思路"></a>二、设计思路</h2><ol>
+<li>连接zookeeper，process监听子节点变化事件，接收事件按规则写业务逻辑，并重新注册锁</li>
+<li>向zookeeper注册一把锁</li>
+<li>从zk的锁父目录下，获取所有子节点，并且注册对父节点的监听</li>
+<li>如果争抢资源的程序就只有自己，则可以直接去访问共享资源</li>
+<li><p>访问资源后删除锁</p>
+<h2 id="三、代码开发"><a href="#三、代码开发" class="headerlink" title="三、代码开发"></a>三、代码开发</h2><p> public class DistributedClientLock {</p>
+</li>
+</ol>
+<pre><code>// 会话超时
+private static final int SESSION_TIMEOUT = 2000;
+// zookeeper集群地址
+private String hosts = &quot;mini1:2181,mini2:2181,mini3:2181&quot;;
+private String groupNode = &quot;locks&quot;;
+private String subNode = &quot;sub&quot;;
+private boolean haveLock = false;
+
+private ZooKeeper zk;
+// 记录自己创建的子节点路径
+private volatile String thisPath;
+
+/**
+ * 连接zookeeper
+ */
+public void connectZookeeper() throws Exception {
+    zk = new ZooKeeper(hosts, SESSION_TIMEOUT, new Watcher() {
+        public void process(WatchedEvent event) {
+            try {
+
+                // 判断事件类型，此处只处理子节点变化事件
+                if (event.getType() == EventType.NodeChildrenChanged &amp;&amp; event.getPath().equals(&quot;/&quot; + groupNode)) {
+                    //获取子节点，并对父节点进行监听
+                    List&lt;String&gt; childrenNodes = zk.getChildren(&quot;/&quot; + groupNode, true);
+                    String thisNode = thisPath.substring((&quot;/&quot; + groupNode + &quot;/&quot;).length());
+                    // 去比较是否自己是最小id
+                    Collections.sort(childrenNodes);
+                    if (childrenNodes.indexOf(thisNode) == 0) {
+                        //访问共享资源处理业务，并且在处理完成之后删除锁
+                        doSomething();
+
+                        //重新注册一把新的锁
+                        thisPath = zk.create(&quot;/&quot; + groupNode + &quot;/&quot; + subNode, null, Ids.OPEN_ACL_UNSAFE,
+                                CreateMode.EPHEMERAL_SEQUENTIAL);
+                    }
+                }
+        } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    });
+
+    // 1、程序一进来就先注册一把锁到zk上
+    thisPath = zk.create(&quot;/&quot; + groupNode + &quot;/&quot; + subNode, null, Ids.OPEN_ACL_UNSAFE,
+            CreateMode.EPHEMERAL_SEQUENTIAL);
+
+    // wait一小会，便于观察
+    Thread.sleep(new Random().nextInt(1000));
+
+    // 从zk的锁父目录下，获取所有子节点，并且注册对父节点的监听
+    List&lt;String&gt; childrenNodes = zk.getChildren(&quot;/&quot; + groupNode, true);
+
+    // 如果争抢资源的程序就只有自己，则可以直接去访问共享资源 
+    if (childrenNodes.size() == 1) {
+        doSomething();
+        thisPath = zk.create(&quot;/&quot; + groupNode + &quot;/&quot; + subNode, null, Ids.OPEN_ACL_UNSAFE,
+                CreateMode.EPHEMERAL_SEQUENTIAL);
+    }
+}
+
+/**
+ * 处理业务逻辑，并且在最后释放锁
+ */
+private void doSomething() throws Exception {
+    try {
+        System.out.println(&quot;gain lock: &quot; + thisPath);
+        Thread.sleep(2000);
+        // do something
+    } finally {
+        System.out.println(&quot;finished: &quot; + thisPath);
+//删除之前的锁节点
+        zk.delete(this.thisPath, -1);
+    }
+}
+
+public static void main(String[] args) throws Exception {
+    DistributedClientLock dl = new DistributedClientLock();
+    dl.connectZookeeper();
+    Thread.sleep(Long.MAX_VALUE);
+}
+</code></pre><p>}</p>
+]]></content>
+    </entry>
+    
+    <entry>
+      <title><![CDATA[Zookeeper-服务器上下线动态感知]]></title>
+      <url>http://spark8.tech/2016/06/23/zkfbs/</url>
+      <content type="html"><![CDATA[<a id="more"></a>
+<p>Zookeeper是一个分布式协调服务<br>在底层其实只提供了两个功能：<br><em>a、管理(存储，读取)用户程序提交的数据；PERSISTANT持久节点</em><br><em>b、并为用户程序提供数据节点监听服务； Ephemeral节点</em></p>
+<h2 id="一、需求描述"><a href="#一、需求描述" class="headerlink" title="一、需求描述"></a>一、需求描述</h2><p>某分布式系统中，主节点可以有多台，可以动态上下线<br>任意一台客户端都能实时感知到主节点服务器的上下线</p>
+<h2 id="二、设计思路"><a href="#二、设计思路" class="headerlink" title="二、设计思路"></a>二、设计思路</h2><p><img src="/images/zkfbs.png" alt="分布式共享锁" title="分布式共享锁"></p>
+<h2 id="三、代码开发"><a href="#三、代码开发" class="headerlink" title="三、代码开发"></a>三、代码开发</h2><h3 id="1-客户端实现"><a href="#1-客户端实现" class="headerlink" title="1. 客户端实现"></a>1. 客户端实现</h3><pre><code>public class DistributedClient {
+    private static final String connectString = &quot;mini1:2181,mini2:2181,mini3:2181&quot;;
+    private static final int sessionTimeout = 2000;
+    private static final String parentNode = &quot;/servers&quot;;
+    // 注意:加volatile的意义何在？先写再读，保证读的结果一致
+    private volatile List&lt;String&gt; serverList;
+    private ZooKeeper zk = null;
+
+    /**
+     * 创建到zk的客户端连接
+     * 
+     * @throws Exception
+     */
+    public void getConnect() throws Exception {
+        zk = new ZooKeeper(connectString, sessionTimeout, new Watcher() {
+            public void process(WatchedEvent event) {
+            // 收到事件通知后的回调函数（应该是我们自己的事件处理逻辑）
+                try {
+                    //重新更新服务器列表，并且注册了监听
+                    getServerList();
+                } catch (Exception e) {
+                }
+            }
+            });
+    }
+
+/**
+ * 获取服务器信息列表
+ * 
+ * @throws Exception
+     */
+    public void getServerList() throws Exception {
+        // 获取服务器子节点信息，并且对父节点进行监听
+        List&lt;String&gt; children = zk.getChildren(parentNode, true);
+
+        // 先创建一个局部的list来存服务器信息
+        List&lt;String&gt; servers = new ArrayList&lt;String&gt;();
+        for (String child : children) {
+            // child只是子节点的节点名
+            byte[] data = zk.getData(parentNode + &quot;/&quot; + child, false, null);
+            servers.add(new String(data));
+        }
+        // 把servers赋值给成员变量serverList，已提供给各业务线程使用
+        serverList = servers;
+
+        //打印服务器列表
+        System.out.println(serverList);
+    }
+
+    /**
+     * 业务功能
+     * @throws InterruptedException
+     */
+    public void handleBussiness() throws InterruptedException {
+        System.out.println(&quot;client start working.....&quot;);
+        Thread.sleep(Long.MAX_VALUE);
+    }
+
+    public static void main(String[] args) throws Exception {
+        // 获取zk连接
+        DistributedClient client = new DistributedClient();
+        client.getConnect();
+        // 获取servers的子节点信息（并监听），从中获取服务器信息列表
+        client.getServerList();
+        // 业务线程启动
+        client.handleBussiness();
+    }
+ }
+</code></pre><h3 id="2-服务端实现"><a href="#2-服务端实现" class="headerlink" title="2. 服务端实现"></a>2. 服务端实现</h3><pre><code>public class DistributedServer {
+
+  private static final String CONNECT_STRING   = &quot;mini1:2181,mini2:2181,mini3:2181&quot;;
+  private static final int    SESSION_TIME_OUT = 2000;
+  private static final String PARENT_NODE      = &quot;/servers&quot;;
+
+  private ZooKeeper zk = null;
+
+  /**
+   * 创建到zk的客户端连接
+   *
+   * @throws Exception
+   */
+  public void getConnect() throws Exception {
+
+      zk = new ZooKeeper(CONNECT_STRING, SESSION_TIME_OUT, new Watcher() {
+          public void process(WatchedEvent event) {
+              // 收到事件通知后的回调函数（应该是我们自己的事件处理逻辑）
+              System.out.println(event.getType() + &quot;---&quot; + event.getPath());
+              /*try {
+        zk.getChildren(&quot;/&quot;, true);
+    } catch (Exception e) {
+    }*/
+          }
+      });
+  }
+
+  /**
+   * 向zk集群注册服务器信息
+   * @param hostname
+   * @throws Exception
+   */
+  public void registerServer(String hostname) throws Exception {
+      Stat exists = zk.exists(PARENT_NODE, false);
+      if (exists == null) zk.create(PARENT_NODE, null, Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+      String path = zk.create(PARENT_NODE + &quot;/server&quot;, hostname.getBytes(), Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL_SEQUENTIAL);
+      System.out.println(hostname + &quot;is online..&quot; + path);
+  }
+
+  /**
+   * 业务功能
+   * @throws InterruptedException
+   */
+  public void handleBussiness(String hostname) throws InterruptedException {
+      System.out.println(hostname + &quot;start working.....&quot;);
+      Thread.sleep(Long.MAX_VALUE);
+  }
+
+  public static void main(String[] args) throws Exception {
+
+      DistributedServer server = new DistributedServer();
+      // 获取zk连接
+      server.getConnect();
+
+      // 利用zk连接注册服务器信息(主机名)
+      server.registerServer(args[0]);
+
+      // 启动业务功能
+      server.handleBussiness(args[0]);
+  }
+</code></pre><p>  }</p>
+]]></content>
+    </entry>
+    
+    <entry>
+      <title><![CDATA[Hive ——内置函数与UDF实现]]></title>
+      <url>http://spark8.tech/2016/06/23/udf/</url>
+      <content type="html"><![CDATA[<a id="more"></a>
+<h2 id="需求描述"><a href="#需求描述" class="headerlink" title="需求描述"></a>需求描述</h2><p>有原始json数据如下：<br><img src="/images/json1.png" alt="" title="json1"><br>需要将数据导入到hive数据仓库中<br><img src="/images/biao1.png" alt="" title="biao"></p>
+<h2 id="代码实现"><a href="#代码实现" class="headerlink" title="代码实现"></a>代码实现</h2><h3 id="内置函数get-json-object"><a href="#内置函数get-json-object" class="headerlink" title="内置函数get_json_object"></a>内置函数get_json_object</h3><pre><code>select get_json_object(line,&apos;$.movie&apos;) as moive,get_json_object(line,&apos;$.rate&apos;) as rate  from t_json limit 10;
+</code></pre><h3 id="UDF实现"><a href="#UDF实现" class="headerlink" title="UDF实现"></a>UDF实现</h3><ol>
+<li><p>先开发一个java类，继承UDF，并重载evaluate方法<br>JsonParser</p>
+<pre><code>public class JsonParser extends UDF {
+
+public String evaluate(String jsonLine) {
+
+ObjectMapper objectMapper = new ObjectMapper();
+
+try {
+MovieRateBean bean = objectMapper.readValue(jsonLine, MovieRateBean.class);
+return bean.toString();
+} catch (Exception e) {
+
+}
+return &quot;&quot;;
+}
+
+//public static void main(String[] args) throws JsonParseException, JsonMappingException, IOException {
+//    String str = &quot;{\&quot;movie\&quot;:\&quot;1193\&quot;,\&quot;rate\&quot;:\&quot;5\&quot;,\&quot;timeStamp\&quot;:\&quot;978300760\&quot;,\&quot;uid\&quot;:\&quot;1\&quot;}&quot;;
+//    ObjectMapper objectMapper = new ObjectMapper();
+//    MovieRateBean readValue = objectMapper.readValue(str, MovieRateBean.class);
+//    System.out.println(readValue);
+//}
+}
+</code></pre><p>MovieRateBean</p>
+<pre><code>//{&quot;movie&quot;:&quot;1721&quot;,&quot;rate&quot;:&quot;3&quot;,&quot;timeStamp&quot;:&quot;965440048&quot;,&quot;uid&quot;:&quot;5114&quot;}
+public class MovieRateBean {
+
+private String movie;
+private String rate;
+private String timeStamp;
+private String uid;
+public String getMovie() {
+return movie;
+}
+public void setMovie(String movie) {
+this.movie = movie;
+}
+public String getRate() {
+return rate;
+}
+public void setRate(String rate) {
+this.rate = rate;
+}
+public String getTimeStamp() {
+return timeStamp;
+}
+public void setTimeStamp(String timeStamp) {
+this.timeStamp = timeStamp;
+}
+public String getUid() {
+return uid;
+}
+public void setUid(String uid) {
+this.uid = uid;
+}
+@Override
+public String toString() {
+return movie + &quot;\t&quot; + rate + &quot;\t&quot; + timeStamp + &quot;\t&quot; + uid;
+}
+}
+</code></pre></li>
+<li><p>打成jar包上传到服务器</p>
+</li>
+<li>将jar包添加到hive的classpath<pre><code>hive&gt;add JAR /home/hadoop/udf.jar;
+</code></pre></li>
+<li>创建临时函数与开发好的java class关联<pre><code>Hive&gt;create temporary function jsonParse as ‘cn.holley.udf.JsonParse&apos;;
+</code></pre></li>
+<li>在hql中使用自定义的函数parseJson<pre><code>select split( jsonParse(line),’\t’)\[0] as movie, split( jsonParse(line),’\\t’)[1] as rate, split( jsonParse(line),’\t’)[2] as timeStamp, split( jsonParse(line),’\t’)[3] as uid from t_json;
+</code></pre></li>
+</ol>
+]]></content>
+    </entry>
+    
+    <entry>
+      <title><![CDATA[Zookeeper-原理补充]]></title>
+      <url>http://spark8.tech/2016/06/23/zkyuanli/</url>
+      <content type="html"><![CDATA[<a id="more"></a>
+<h2 id="Zookepper的选举机制（保证数据一致性的核心算法paxos）"><a href="#Zookepper的选举机制（保证数据一致性的核心算法paxos）" class="headerlink" title="Zookepper的选举机制（保证数据一致性的核心算法paxos）"></a>Zookepper的选举机制（保证数据一致性的核心算法paxos）</h2><p>以一个简单的例子来说明整个选举的过程.<br>假设有五台服务器组成的zookeeper集群,它们的id从1-5,同时它们都是最新启动的,也就是没有历史数据,在存放数据量这一点上,都是一样的.假设这些服务器依序启动,来看看会发生什么.<br>1) 服务器1启动,此时只有它一台服务器启动了,它发出去的报没有任何响应,所以它的选举状态一直是LOOKING状态<br>2) 服务器2启动,它与最开始启动的服务器1进行通信,互相交换自己的选举结果,由于两者都没有历史数据,所以id值较大的服务器2胜出,但是由于没有达到超过半数以上的服务器都同意选举它(这个例子中的半数以上是3),所以服务器1,2还是继续保持LOOKING状态.<br>3) 服务器3启动,根据前面的理论分析,服务器3成为服务器1,2,3中的老大,而与上面不同的是,此时有三台服务器选举了它,所以它成为了这次选举的leader.<br>4) 服务器4启动,根据前面的分析,理论上服务器4应该是服务器1,2,3,4中最大的,但是由于前面已经有半数以上的服务器选举了服务器3,所以它只能接收当小弟的命了.<br>5) 服务器5启动,同4一样,当小弟.</p>
+<h2 id="非全新集群的选举机制-数据恢复"><a href="#非全新集群的选举机制-数据恢复" class="headerlink" title="非全新集群的选举机制(数据恢复)"></a>非全新集群的选举机制(数据恢复)</h2><p>那么，初始化的时候，是按照上述的说明进行选举的，但是当zookeeper运行了一段时间之后，有机器down掉，重新选举时，选举过程就相对复杂了。<br>需要加入数据version、leader id和逻辑时钟。<br>数据version：数据新的version就大，数据每次更新都会更新version。<br>Leader id：就是我们配置的myid中的值，每个机器一个。<br>逻辑时钟：这个值从0开始递增,每次选举对应一个值,也就是说:  如果在同一次选举中,那么这个值应该是一致的 ;  逻辑时钟值越大,说明这一次选举leader的进程更新.<br>选举的标准就变成：<br>1、逻辑时钟小的选举结果被忽略，重新投票<br>2、统一逻辑时钟后，数据id大的胜出<br>3、数据id相同的情况下，leader id大的胜出<br>根据这个规则选出leader。</p>
+]]></content>
+    </entry>
+    
+    <entry>
+      <title><![CDATA[Hive——级联求和accumulate]]></title>
+      <url>http://spark8.tech/2016/06/23/hivejilian/</url>
+      <content type="html"><![CDATA[<a id="more"></a>
+<h2 id="需求描述"><a href="#需求描述" class="headerlink" title="需求描述"></a>需求描述</h2><p>有如下访客访问次数统计表 t_access_times<br><img src="/images/hiveacc.png" alt="" title="hiveacc"><br>需要输出报表：t_access_times_accumulate<br><img src="/images/hiveacce.png" alt="" title="hiveacce"></p>
+<h2 id="设计思路"><a href="#设计思路" class="headerlink" title="设计思路"></a>设计思路</h2><ol>
+<li>自己和自己join</li>
+<li>join后记录中取B表月份小于或者等于A表的月份薪酬和<br>此思路适合大部分级联求和案例。</li>
+</ol>
+<h2 id="代码实现"><a href="#代码实现" class="headerlink" title="代码实现"></a>代码实现</h2><pre><code>select A.username,A.month,max(A.salary) as salary,sum(B.salary) as accumulate
+  from 
+    (select username,month,sum(salary) as salary from t_access_times group by username,month) A 
+    inner join 
+    (select username,month,sum(salary) as salary from t_access_times group by username,month) B
+    on
+    A.username=B.username
+    where B.month &lt;= A.month
+    group by A.username,A.month
+    order by A.username,A.month;
+</code></pre>]]></content>
+    </entry>
+    
+    <entry>
+      <title><![CDATA[Hadoop2.x——实现HA]]></title>
+      <url>http://spark8.tech/2016/06/22/hadoopha/</url>
+      <content type="html"><![CDATA[<a id="more"></a>
+<h2 id="HA的运作机制"><a href="#HA的运作机制" class="headerlink" title="HA的运作机制"></a>HA的运作机制</h2><p>(1)  hadoop-HA集群运作机制介绍<br>所谓HA，即高可用（7*24小时不中断服务）<br>实现高可用最关键的是消除单点故障<br>hadoop-ha严格来说应该分成各个组件的HA机制——HDFS的HA、YARN的HA<br>(2) HDFS的HA机制详解<br>通过双namenode消除单点故障<br>双namenode协调工作的要点：<br>A、元数据管理方式需要改变：<br>内存中各自保存一份元数据<br>Edits日志只能有一份，只有Active状态的namenode节点可以做写操作<br>两个namenode都可以读取edits<br>共享的edits放在一个共享存储中管理（qjournal和NFS两个主流实现）<br>B、需要一个状态管理功能模块<br>实现了一个zkfailover，常驻在每一个namenode所在的节点<br>每一个zkfailover负责监控自己所在namenode节点，利用zk进行状态标识<br>当需要进行状态切换时，由zkfailover来负责切换<br>切换时需要防止brain split现象的发生</p>
+<h2 id="HDFS-HA图解"><a href="#HDFS-HA图解" class="headerlink" title="HDFS-HA图解"></a>HDFS-HA图解</h2><p><img src="/images/hdfsha.png" alt="" title="hdfsha"></p>
+<h2 id="HA集群的安装部署"><a href="#HA集群的安装部署" class="headerlink" title="HA集群的安装部署"></a>HA集群的安装部署</h2><h3 id="集群节点规划"><a href="#集群节点规划" class="headerlink" title="集群节点规划"></a>集群节点规划</h3><p>10节点<br><img src="/images/10jiedian.png" alt="" title="10jiedian"><br>8节点<br><img src="/images/8jiedian.png" alt="" title="8jiedian"></p>
+<h3 id="环境准备"><a href="#环境准备" class="headerlink" title="环境准备"></a>环境准备</h3><p>环境准备<br>a/linux系统准备<br>ip地址配置<br>hostname配置<br>hosts映射配置<br>防火墙关闭<br>init启动级别修改3<br>sudoers加入hadoop用户<br>ssh免密登陆配置</p>
+<p>b/java环境的配置<br>上传jdk，解压，修改/etc/profile</p>
+<p> c/zookeeper集群的部署</p>
+<h3 id="配置文件"><a href="#配置文件" class="headerlink" title="配置文件"></a>配置文件</h3><p>core-site.xml</p>
+<pre><code>&lt;configuration&gt;
+&lt;!-- 指定hdfs的nameservice为ns1 --&gt;
+&lt;property&gt;
+&lt;name&gt;fs.defaultFS&lt;/name&gt;
+&lt;value&gt;hdfs://ns1/&lt;/value&gt;
+&lt;/property&gt;
+&lt;!-- 指定hadoop临时目录 --&gt;
+&lt;property&gt;
+&lt;name&gt;hadoop.tmp.dir&lt;/name&gt;
+&lt;value&gt;/home/hadoop/app/hadoop-2.4.1/tmp&lt;/value&gt;
+&lt;/property&gt;
+
+&lt;!-- 指定zookeeper地址 --&gt;
+&lt;property&gt;
+&lt;name&gt;ha.zookeeper.quorum&lt;/name&gt;
+&lt;value&gt;weekend05:2181,weekend06:2181,weekend07:2181&lt;/value&gt;
+&lt;/property&gt;
+&lt;/configuration&gt;
+</code></pre><p>hdfs-site.xml</p>
+<pre><code>&lt;configuration&gt;
+&lt;!--指定hdfs的nameservice为ns1，需要和core-site.xml中的保持一致 --&gt;
+&lt;property&gt;
+&lt;name&gt;dfs.nameservices&lt;/name&gt;
+&lt;value&gt;ns1&lt;/value&gt;
+&lt;/property&gt;
+&lt;!-- ns1下面有两个NameNode，分别是nn1，nn2 --&gt;
+&lt;property&gt;
+&lt;name&gt;dfs.ha.namenodes.ns1&lt;/name&gt;
+&lt;value&gt;nn1,nn2&lt;/value&gt;
+&lt;/property&gt;
+&lt;!-- nn1的RPC通信地址 --&gt;
+&lt;property&gt;
+&lt;name&gt;dfs.namenode.rpc-address.ns1.nn1&lt;/name&gt;
+&lt;value&gt;weekend01:9000&lt;/value&gt;
+&lt;/property&gt;
+&lt;!-- nn1的http通信地址 --&gt;
+&lt;property&gt;
+&lt;name&gt;dfs.namenode.http-address.ns1.nn1&lt;/name&gt;
+&lt;value&gt;weekend01:50070&lt;/value&gt;
+&lt;/property&gt;
+&lt;!-- nn2的RPC通信地址 --&gt;
+&lt;property&gt;
+&lt;name&gt;dfs.namenode.rpc-address.ns1.nn2&lt;/name&gt;
+&lt;value&gt;weekend02:9000&lt;/value&gt;
+&lt;/property&gt;
+&lt;!-- nn2的http通信地址 --&gt;
+&lt;property&gt;
+&lt;name&gt;dfs.namenode.http-address.ns1.nn2&lt;/name&gt;
+&lt;value&gt;weekend02:50070&lt;/value&gt;
+&lt;/property&gt;
+&lt;!-- 指定NameNode的edits元数据在JournalNode上的存放位置 --&gt;
+&lt;property&gt;
+&lt;name&gt;dfs.namenode.shared.edits.dir&lt;/name&gt;
+&lt;value&gt;qjournal://weekend05:8485;weekend06:8485;weekend07:8485/ns1&lt;/value&gt;
+&lt;/property&gt;
+&lt;!-- 指定JournalNode在本地磁盘存放数据的位置 --&gt;
+&lt;property&gt;
+&lt;name&gt;dfs.journalnode.edits.dir&lt;/name&gt;
+&lt;value&gt;/home/hadoop/app/hadoop-2.4.1/journaldata&lt;/value&gt;
+&lt;/property&gt;
+&lt;!-- 开启NameNode失败自动切换 --&gt;
+&lt;property&gt;
+&lt;name&gt;dfs.ha.automatic-failover.enabled&lt;/name&gt;
+&lt;value&gt;true&lt;/value&gt;
+&lt;/property&gt;
+&lt;!-- 配置失败自动切换实现方式 --&gt;
+&lt;property&gt;
+&lt;name&gt;dfs.client.failover.proxy.provider.ns1&lt;/name&gt;
+&lt;value&gt;org.apache.hadoop.hdfs.server.namenode.ha.ConfiguredFailoverProxyProvider&lt;/value&gt;
+&lt;/property&gt;
+&lt;!-- 配置隔离机制方法，多个机制用换行分割，即每个机制暂用一行--&gt;
+&lt;property&gt;
+&lt;name&gt;dfs.ha.fencing.methods&lt;/name&gt;
+&lt;value&gt;
+sshfence
+shell(/bin/true)
+&lt;/value&gt;
+&lt;/property&gt;
+&lt;!-- 使用sshfence隔离机制时需要ssh免登陆 --&gt;
+&lt;property&gt;
+&lt;name&gt;dfs.ha.fencing.ssh.private-key-files&lt;/name&gt;
+&lt;value&gt;/home/hadoop/.ssh/id_rsa&lt;/value&gt;
+&lt;/property&gt;
+&lt;!-- 配置sshfence隔离机制超时时间 --&gt;
+&lt;property&gt;
+&lt;name&gt;dfs.ha.fencing.ssh.connect-timeout&lt;/name&gt;
+&lt;value&gt;30000&lt;/value&gt;
+&lt;/property&gt;
+/configuration&gt;
+</code></pre><h3 id="集群运维测试"><a href="#集群运维测试" class="headerlink" title="集群运维测试"></a>集群运维测试</h3><p>HA集群中两个namenode状态的管理命令</p>
 <blockquote>
-<p> 订单数据表t_order：<br>  id    date        pid      amount<br> 1001    20150710    P0001    2<br> 1002    20150710    P0001    3<br> 1002    20150710    P0002    3</p>
-<p> 商品信息表t_product<br>  id        pname    category_id    price<br>  P0001    小米5    1000        2<br>  P0002    锤子T1    1000        3</p>
-<p>订单表中没有商品名称，需要对数据进行补全<br>1001    20150710    P0001    小米5     2<br>1002    20150710    P0001    小米5     3<br>1002    20150710    P0002    锤子T3  3</p>
+<p><a href="#">root@mini2 hadoop-2.6.4</a># bin/hdfs haadmin<br>Usage: DFSHAAdmin <a href="#">-ns \<nameserviceid\></nameserviceid\></a><br>[-transitionToActive \<serviceid\> <a href="#">–forceactive</a>]<br><a href="#">-transitionToStandby \<serviceid\></serviceid\></a><br>[-failover <a href="#">–forcefence</a> <a href="#">–forceactive</a> \<serviceid\> \<serviceid\>]<br><a href="#">-getServiceState \<serviceid\></serviceid\></a><br><a href="#">-checkHealth \<serviceid\></serviceid\></a><br><a href="#">-help \<command\></command\></a><br>示例： 切换nn2为active<br>bin/hdfs haadmin -transitionToActive nn2 –forcemanual</serviceid\></serviceid\></serviceid\></p>
+<h4 id="Datanode动态上下线"><a href="#Datanode动态上下线" class="headerlink" title="Datanode动态上下线"></a>Datanode动态上下线</h4><p>Datanode动态上下线很简单，步骤如下：<br>a)    准备一台服务器，设置好环境<br>b)    部署hadoop的安装包，并同步集群配置<br>c)    联网上线，新datanode会自动加入集群<br>d)    如果是一次增加大批datanode，还应该做集群负载重均衡</p>
+<h4 id="Namenode状态切换管理"><a href="#Namenode状态切换管理" class="headerlink" title="Namenode状态切换管理"></a>Namenode状态切换管理</h4><p>使用的命令上hdfs  haadmin<br>可用 hdfs  haadmin –help查看所有帮助信息<br><img src="/images/hahelp.png" alt="" title="hahelp"><br>可以看到，状态操作的命令示例：<br>查看namenode工作状态<br>    hdfs haadmin -getServiceState nn1<br>将standby状态namenode切换到active<br>    hdfs haadmin –transitionToActive nn1<br>将active状态namenode切换到standby<br>    hdfs haadmin –transitionToStandby nn2</p>
+<h4 id="数据块的balance"><a href="#数据块的balance" class="headerlink" title="数据块的balance"></a>数据块的balance</h4><p>启动balancer的命令：<br>start-balancer.sh -threshold 8<br>运行之后，会有Balancer进程出现：<br><img src="/images/balanceha.png" alt="" title="balanceha"><br>上述命令设置了Threshold为8%，那么执行balancer命令的时候，首先统计所有DataNode的磁盘利用率的均值，然后判断如果某一个DataNode的磁盘利用率超过这个均值Threshold，那么将会把这个DataNode的block转移到磁盘利用率低的DataNode，这对于新节点的加入来说十分有用。Threshold的值为1到100之间，不显示的进行参数设置的话，默认是10。</p>
+<h3 id="HA下hdfs-api变化"><a href="#HA下hdfs-api变化" class="headerlink" title="HA下hdfs-api变化"></a>HA下hdfs-api变化</h3><p>客户端需要nameservice的配置信息，其他不变</p>
 </blockquote>
-<h2 id="设计思路"><a href="#设计思路" class="headerlink" title="设计思路"></a>设计思路</h2><p>数据输入：order.txt、pd.txt<br>1、Map 阶段</p>
-<blockquote>
-<p>KEYOUT  pid<br>VALUEOUT OrderAllInfo writealbe(write,read)<br>输入两个文件的数据<br>VALUEIN 1001      20150710    P0001    2<br>VALUEIN 1001      20150710    P0001    2<br>VALUEIN 1001      20150710    P0001    2<br>来自不同的文件，文件名不一样<br>VALUEIN   P0001    小米5    1000    2<br>VALUEIN   P0001    小米5    1000    2<br>来自不同的文件，文件名不一样<br>能够在OrderAllInfo中加入一个tag标志，当文件名等于order，<br>tag取值为1 当文件名等于product时，tag取值为0<br>2、Reduce 阶段<br>KEYIN   pid<br>VALUEiN        iterable\<orderallinfo,orderallinfo,orderallinfo,orderallinfo\></orderallinfo,orderallinfo,orderallinfo,orderallinfo\></p>
-<p>OrderAllInfo tag=0 记录，商品记录只有一条      商品表<br>OrderAllInfo tag=1                                                     订单表<br>OrderAllInfo tag=1                          订单表<br>过程<br>OrderAllInfo tag=1 +  OrderAllInfo tag=0   = 新的 OrderAllInfo<br>OrderAllInfo tag=1 +  OrderAllInfo tag=0   = 新的 OrderAllInfo<br>得到<br>1001     20150710    P0001    小米5     2<br>1002    20150710    P0001    小米5     3<br>1002    20150710    P0002    锤子T3     3</p>
-<h2 id="代码开发"><a href="#代码开发" class="headerlink" title="代码开发"></a>代码开发</h2><p>源码请参考<a href="www.baidu.com">github链接</a>,以下为核心实现。<br>1.驱动类<br><img src="/images/zljqdl.png" alt="" title="zljqdl"><br>2.Map类<br><img src="/images/zljmapl.png" alt="" title="zljmap"><br>3.Reduce类<br><img src="/images/zljreducel.png" alt="" title="zljreducel"></p>
-</blockquote>
+<pre><code>/**
+如果访问的是一个ha机制的集群
+则一定要把core-site.xml和hdfs-site.xml配置文件放在客户端程序的classpath下
+以让客户端能够理解hdfs://ns1/中  “ns1”是一个ha机制中的namenode对——nameservice
+以及知道ns1下具体的namenode通信地址
+@author
+ *
+ */
+public class UploadFile {
+    public static void main(String[] args) throws Exception  {
+
+    Configuration conf = new Configuration();
+    conf.set(&quot;fs.defaultFS&quot;, &quot;hdfs://ns1/&quot;);
+
+    FileSystem fs = FileSystem.get(new URI(&quot;hdfs://ns1/&quot;),conf,&quot;hadoop&quot;);
+
+    fs.copyFromLocalFile(new Path(&quot;g:/eclipse-jee-luna-SR1-linux-gtk.tar.gz&quot;), new Path(&quot;hdfs://ns1/&quot;));
+    fs.close(); 
+    }
+}
+</code></pre><p>Federation下 mr程序运行的staging提交目录问题<br>        <property><br>          <name>yarn.app.mapreduce.am.staging-dir</name><br>          <value>/bi/tmp/hadoop-yarn/staging</value><br>          <description>The staging dir used while submitting jobs.<br>          </description><br>        </property></p>
 ]]></content>
     </entry>
     
@@ -277,138 +1092,6 @@ public class LogEnhancer extends Configured implements Tool{
     </entry>
     
     <entry>
-      <title><![CDATA[Hadoop2.x——实现HA]]></title>
-      <url>http://spark8.tech/2016/06/22/hadoopha/</url>
-      <content type="html"><![CDATA[<a id="more"></a>
-<h2 id="HA的运作机制"><a href="#HA的运作机制" class="headerlink" title="HA的运作机制"></a>HA的运作机制</h2><p>(1)  hadoop-HA集群运作机制介绍<br>所谓HA，即高可用（7*24小时不中断服务）<br>实现高可用最关键的是消除单点故障<br>hadoop-ha严格来说应该分成各个组件的HA机制——HDFS的HA、YARN的HA<br>(2) HDFS的HA机制详解<br>通过双namenode消除单点故障<br>双namenode协调工作的要点：<br>A、元数据管理方式需要改变：<br>内存中各自保存一份元数据<br>Edits日志只能有一份，只有Active状态的namenode节点可以做写操作<br>两个namenode都可以读取edits<br>共享的edits放在一个共享存储中管理（qjournal和NFS两个主流实现）<br>B、需要一个状态管理功能模块<br>实现了一个zkfailover，常驻在每一个namenode所在的节点<br>每一个zkfailover负责监控自己所在namenode节点，利用zk进行状态标识<br>当需要进行状态切换时，由zkfailover来负责切换<br>切换时需要防止brain split现象的发生</p>
-<h2 id="HDFS-HA图解"><a href="#HDFS-HA图解" class="headerlink" title="HDFS-HA图解"></a>HDFS-HA图解</h2><p><img src="/images/hdfsha.png" alt="" title="hdfsha"></p>
-<h2 id="HA集群的安装部署"><a href="#HA集群的安装部署" class="headerlink" title="HA集群的安装部署"></a>HA集群的安装部署</h2><h3 id="集群节点规划"><a href="#集群节点规划" class="headerlink" title="集群节点规划"></a>集群节点规划</h3><p>10节点<br><img src="/images/10jiedian.png" alt="" title="10jiedian"><br>8节点<br><img src="/images/8jiedian.png" alt="" title="8jiedian"></p>
-<h3 id="环境准备"><a href="#环境准备" class="headerlink" title="环境准备"></a>环境准备</h3><p>环境准备<br>a/linux系统准备<br>ip地址配置<br>hostname配置<br>hosts映射配置<br>防火墙关闭<br>init启动级别修改3<br>sudoers加入hadoop用户<br>ssh免密登陆配置</p>
-<p>b/java环境的配置<br>上传jdk，解压，修改/etc/profile</p>
-<p> c/zookeeper集群的部署</p>
-<h3 id="配置文件"><a href="#配置文件" class="headerlink" title="配置文件"></a>配置文件</h3><p>core-site.xml</p>
-<pre><code>&lt;configuration&gt;
-&lt;!-- 指定hdfs的nameservice为ns1 --&gt;
-&lt;property&gt;
-&lt;name&gt;fs.defaultFS&lt;/name&gt;
-&lt;value&gt;hdfs://ns1/&lt;/value&gt;
-&lt;/property&gt;
-&lt;!-- 指定hadoop临时目录 --&gt;
-&lt;property&gt;
-&lt;name&gt;hadoop.tmp.dir&lt;/name&gt;
-&lt;value&gt;/home/hadoop/app/hadoop-2.4.1/tmp&lt;/value&gt;
-&lt;/property&gt;
-
-&lt;!-- 指定zookeeper地址 --&gt;
-&lt;property&gt;
-&lt;name&gt;ha.zookeeper.quorum&lt;/name&gt;
-&lt;value&gt;weekend05:2181,weekend06:2181,weekend07:2181&lt;/value&gt;
-&lt;/property&gt;
-&lt;/configuration&gt;
-</code></pre><p>hdfs-site.xml</p>
-<pre><code>&lt;configuration&gt;
-&lt;!--指定hdfs的nameservice为ns1，需要和core-site.xml中的保持一致 --&gt;
-&lt;property&gt;
-&lt;name&gt;dfs.nameservices&lt;/name&gt;
-&lt;value&gt;ns1&lt;/value&gt;
-&lt;/property&gt;
-&lt;!-- ns1下面有两个NameNode，分别是nn1，nn2 --&gt;
-&lt;property&gt;
-&lt;name&gt;dfs.ha.namenodes.ns1&lt;/name&gt;
-&lt;value&gt;nn1,nn2&lt;/value&gt;
-&lt;/property&gt;
-&lt;!-- nn1的RPC通信地址 --&gt;
-&lt;property&gt;
-&lt;name&gt;dfs.namenode.rpc-address.ns1.nn1&lt;/name&gt;
-&lt;value&gt;weekend01:9000&lt;/value&gt;
-&lt;/property&gt;
-&lt;!-- nn1的http通信地址 --&gt;
-&lt;property&gt;
-&lt;name&gt;dfs.namenode.http-address.ns1.nn1&lt;/name&gt;
-&lt;value&gt;weekend01:50070&lt;/value&gt;
-&lt;/property&gt;
-&lt;!-- nn2的RPC通信地址 --&gt;
-&lt;property&gt;
-&lt;name&gt;dfs.namenode.rpc-address.ns1.nn2&lt;/name&gt;
-&lt;value&gt;weekend02:9000&lt;/value&gt;
-&lt;/property&gt;
-&lt;!-- nn2的http通信地址 --&gt;
-&lt;property&gt;
-&lt;name&gt;dfs.namenode.http-address.ns1.nn2&lt;/name&gt;
-&lt;value&gt;weekend02:50070&lt;/value&gt;
-&lt;/property&gt;
-&lt;!-- 指定NameNode的edits元数据在JournalNode上的存放位置 --&gt;
-&lt;property&gt;
-&lt;name&gt;dfs.namenode.shared.edits.dir&lt;/name&gt;
-&lt;value&gt;qjournal://weekend05:8485;weekend06:8485;weekend07:8485/ns1&lt;/value&gt;
-&lt;/property&gt;
-&lt;!-- 指定JournalNode在本地磁盘存放数据的位置 --&gt;
-&lt;property&gt;
-&lt;name&gt;dfs.journalnode.edits.dir&lt;/name&gt;
-&lt;value&gt;/home/hadoop/app/hadoop-2.4.1/journaldata&lt;/value&gt;
-&lt;/property&gt;
-&lt;!-- 开启NameNode失败自动切换 --&gt;
-&lt;property&gt;
-&lt;name&gt;dfs.ha.automatic-failover.enabled&lt;/name&gt;
-&lt;value&gt;true&lt;/value&gt;
-&lt;/property&gt;
-&lt;!-- 配置失败自动切换实现方式 --&gt;
-&lt;property&gt;
-&lt;name&gt;dfs.client.failover.proxy.provider.ns1&lt;/name&gt;
-&lt;value&gt;org.apache.hadoop.hdfs.server.namenode.ha.ConfiguredFailoverProxyProvider&lt;/value&gt;
-&lt;/property&gt;
-&lt;!-- 配置隔离机制方法，多个机制用换行分割，即每个机制暂用一行--&gt;
-&lt;property&gt;
-&lt;name&gt;dfs.ha.fencing.methods&lt;/name&gt;
-&lt;value&gt;
-sshfence
-shell(/bin/true)
-&lt;/value&gt;
-&lt;/property&gt;
-&lt;!-- 使用sshfence隔离机制时需要ssh免登陆 --&gt;
-&lt;property&gt;
-&lt;name&gt;dfs.ha.fencing.ssh.private-key-files&lt;/name&gt;
-&lt;value&gt;/home/hadoop/.ssh/id_rsa&lt;/value&gt;
-&lt;/property&gt;
-&lt;!-- 配置sshfence隔离机制超时时间 --&gt;
-&lt;property&gt;
-&lt;name&gt;dfs.ha.fencing.ssh.connect-timeout&lt;/name&gt;
-&lt;value&gt;30000&lt;/value&gt;
-&lt;/property&gt;
-/configuration&gt;
-</code></pre><h3 id="集群运维测试"><a href="#集群运维测试" class="headerlink" title="集群运维测试"></a>集群运维测试</h3><p>HA集群中两个namenode状态的管理命令</p>
-<blockquote>
-<p><a href="#">root@mini2 hadoop-2.6.4</a># bin/hdfs haadmin<br>Usage: DFSHAAdmin <a href="#">-ns \<nameserviceid\></nameserviceid\></a><br>[-transitionToActive \<serviceid\> <a href="#">–forceactive</a>]<br><a href="#">-transitionToStandby \<serviceid\></serviceid\></a><br>[-failover <a href="#">–forcefence</a> <a href="#">–forceactive</a> \<serviceid\> \<serviceid\>]<br><a href="#">-getServiceState \<serviceid\></serviceid\></a><br><a href="#">-checkHealth \<serviceid\></serviceid\></a><br><a href="#">-help \<command\></command\></a><br>示例： 切换nn2为active<br>bin/hdfs haadmin -transitionToActive nn2 –forcemanual</serviceid\></serviceid\></serviceid\></p>
-<h4 id="Datanode动态上下线"><a href="#Datanode动态上下线" class="headerlink" title="Datanode动态上下线"></a>Datanode动态上下线</h4><p>Datanode动态上下线很简单，步骤如下：<br>a)    准备一台服务器，设置好环境<br>b)    部署hadoop的安装包，并同步集群配置<br>c)    联网上线，新datanode会自动加入集群<br>d)    如果是一次增加大批datanode，还应该做集群负载重均衡</p>
-<h4 id="Namenode状态切换管理"><a href="#Namenode状态切换管理" class="headerlink" title="Namenode状态切换管理"></a>Namenode状态切换管理</h4><p>使用的命令上hdfs  haadmin<br>可用 hdfs  haadmin –help查看所有帮助信息<br><img src="/images/hahelp.png" alt="" title="hahelp"><br>可以看到，状态操作的命令示例：<br>查看namenode工作状态<br>    hdfs haadmin -getServiceState nn1<br>将standby状态namenode切换到active<br>    hdfs haadmin –transitionToActive nn1<br>将active状态namenode切换到standby<br>    hdfs haadmin –transitionToStandby nn2</p>
-<h4 id="数据块的balance"><a href="#数据块的balance" class="headerlink" title="数据块的balance"></a>数据块的balance</h4><p>启动balancer的命令：<br>start-balancer.sh -threshold 8<br>运行之后，会有Balancer进程出现：<br><img src="/images/balanceha.png" alt="" title="balanceha"><br>上述命令设置了Threshold为8%，那么执行balancer命令的时候，首先统计所有DataNode的磁盘利用率的均值，然后判断如果某一个DataNode的磁盘利用率超过这个均值Threshold，那么将会把这个DataNode的block转移到磁盘利用率低的DataNode，这对于新节点的加入来说十分有用。Threshold的值为1到100之间，不显示的进行参数设置的话，默认是10。</p>
-<h3 id="HA下hdfs-api变化"><a href="#HA下hdfs-api变化" class="headerlink" title="HA下hdfs-api变化"></a>HA下hdfs-api变化</h3><p>客户端需要nameservice的配置信息，其他不变</p>
-</blockquote>
-<pre><code>/**
-如果访问的是一个ha机制的集群
-则一定要把core-site.xml和hdfs-site.xml配置文件放在客户端程序的classpath下
-以让客户端能够理解hdfs://ns1/中  “ns1”是一个ha机制中的namenode对——nameservice
-以及知道ns1下具体的namenode通信地址
-@author
- *
- */
-public class UploadFile {
-    public static void main(String[] args) throws Exception  {
-
-    Configuration conf = new Configuration();
-    conf.set(&quot;fs.defaultFS&quot;, &quot;hdfs://ns1/&quot;);
-
-    FileSystem fs = FileSystem.get(new URI(&quot;hdfs://ns1/&quot;),conf,&quot;hadoop&quot;);
-
-    fs.copyFromLocalFile(new Path(&quot;g:/eclipse-jee-luna-SR1-linux-gtk.tar.gz&quot;), new Path(&quot;hdfs://ns1/&quot;));
-    fs.close(); 
-    }
-}
-</code></pre><p>Federation下 mr程序运行的staging提交目录问题<br>        <property><br>          <name>yarn.app.mapreduce.am.staging-dir</name><br>          <value>/bi/tmp/hadoop-yarn/staging</value><br>          <description>The staging dir used while submitting jobs.<br>          </description><br>        </property></p>
-]]></content>
-    </entry>
-    
-    <entry>
       <title><![CDATA[Hadoop2.x——共同好友问题]]></title>
       <url>http://spark8.tech/2016/06/22/gongtonghaoyou/</url>
       <content type="html"><![CDATA[<a id="more"></a>
@@ -618,6 +1301,25 @@ protected void reduce(Text key, Iterable&lt;Text&gt; values, Context context) th
 }
 }
 </code></pre>]]></content>
+    </entry>
+    
+    <entry>
+      <title><![CDATA[Hadoop2.x——左连接]]></title>
+      <url>http://spark8.tech/2016/06/22/hadoopzlj/</url>
+      <content type="html"><![CDATA[<a id="more"></a>
+<h2 id="需求描述"><a href="#需求描述" class="headerlink" title="需求描述"></a>需求描述</h2><p>有两张表，关联字段为pid，订单表中没有商品名称，需要对数据进行补全，使用MapReduce思想，进行编程。</p>
+<blockquote>
+<p> 订单数据表t_order：<br>  id    date        pid      amount<br> 1001    20150710    P0001    2<br> 1002    20150710    P0001    3<br> 1002    20150710    P0002    3</p>
+<p> 商品信息表t_product<br>  id        pname    category_id    price<br>  P0001    小米5    1000        2<br>  P0002    锤子T1    1000        3</p>
+<p>订单表中没有商品名称，需要对数据进行补全<br>1001    20150710    P0001    小米5     2<br>1002    20150710    P0001    小米5     3<br>1002    20150710    P0002    锤子T3  3</p>
+</blockquote>
+<h2 id="设计思路"><a href="#设计思路" class="headerlink" title="设计思路"></a>设计思路</h2><p>数据输入：order.txt、pd.txt<br>1、Map 阶段</p>
+<blockquote>
+<p>KEYOUT  pid<br>VALUEOUT OrderAllInfo writealbe(write,read)<br>输入两个文件的数据<br>VALUEIN 1001      20150710    P0001    2<br>VALUEIN 1001      20150710    P0001    2<br>VALUEIN 1001      20150710    P0001    2<br>来自不同的文件，文件名不一样<br>VALUEIN   P0001    小米5    1000    2<br>VALUEIN   P0001    小米5    1000    2<br>来自不同的文件，文件名不一样<br>能够在OrderAllInfo中加入一个tag标志，当文件名等于order，<br>tag取值为1 当文件名等于product时，tag取值为0<br>2、Reduce 阶段<br>KEYIN   pid<br>VALUEiN        iterable\<orderallinfo,orderallinfo,orderallinfo,orderallinfo\></orderallinfo,orderallinfo,orderallinfo,orderallinfo\></p>
+<p>OrderAllInfo tag=0 记录，商品记录只有一条      商品表<br>OrderAllInfo tag=1                                                     订单表<br>OrderAllInfo tag=1                          订单表<br>过程<br>OrderAllInfo tag=1 +  OrderAllInfo tag=0   = 新的 OrderAllInfo<br>OrderAllInfo tag=1 +  OrderAllInfo tag=0   = 新的 OrderAllInfo<br>得到<br>1001     20150710    P0001    小米5     2<br>1002    20150710    P0001    小米5     3<br>1002    20150710    P0002    锤子T3     3</p>
+<h2 id="代码开发"><a href="#代码开发" class="headerlink" title="代码开发"></a>代码开发</h2><p>源码请参考<a href="www.baidu.com">github链接</a>,以下为核心实现。<br>1.驱动类<br><img src="/images/zljqdl.png" alt="" title="zljqdl"><br>2.Map类<br><img src="/images/zljmapl.png" alt="" title="zljmap"><br>3.Reduce类<br><img src="/images/zljreducel.png" alt="" title="zljreducel"></p>
+</blockquote>
+]]></content>
     </entry>
     
     <entry>
@@ -834,6 +1536,71 @@ public static void main(String[] args) throws Exception {
     </entry>
     
     <entry>
+      <title><![CDATA[Spark1.6—自定义排序规则，对比Hadoop MR]]></title>
+      <url>http://spark8.tech/2016/06/21/sparksortby/</url>
+      <content type="html"><![CDATA[<a id="more"></a>
+<h2 id="需求描述"><a href="#需求描述" class="headerlink" title="需求描述"></a>需求描述</h2><p>使用隐式转换，自定义排序规则</p>
+<h2 id="实现思路"><a href="#实现思路" class="headerlink" title="实现思路"></a>实现思路</h2><p>第一种方式：case class Girl 混入 Ordered<a href="#">Girl</a>接口，实现comapre方法，但是明显的高耦合<br>第二种方式：使用隐式转换，按sortBy要求 传入隐式值girlOrdering，实现解耦和自定义排序<br><img src="/images/sortby.png" alt=""></p>
+<h2 id="代码实现"><a href="#代码实现" class="headerlink" title="代码实现"></a>代码实现</h2><p>第一种方式：</p>
+<pre><code>object CustomSort {
+
+  def main(args: Array[String]) {
+    val conf = new SparkConf().setAppName(&quot;CustomSort&quot;).setMaster(&quot;local[2]&quot;)
+    val sc = new SparkContext(conf)
+    val rdd1 = sc.parallelize(List((&quot;yuihatano&quot;, 90, 28, 1), (&quot;angelababy&quot;, 90, 27, 2),(&quot;JuJingYi&quot;, 95, 22, 3)))
+    import OrderContext._
+    val rdd2 = rdd1.sortBy(x =&gt; Girl(x._2, x._3), false)
+    println(rdd2.collect().toBuffer)
+    sc.stop()
+  }
+
+}
+
+/**
+  * 第一种方式
+  * @param faceValue
+  * @param age
+*/
+case class Girl(val faceValue: Int, val age: Int) extends Ordered[Girl] with Serializable {
+  override def compare(that: Girl): Int = {
+    if(this.faceValue == that.faceValue) {
+      that.age - this.age
+    } else {
+      this.faceValue -that.faceValue
+    }
+  }
+}
+</code></pre><p>第二种方式：</p>
+<pre><code>case class Girl(faceValue: Int, age: Int) extends Serializable
+
+object OrderContext {
+  implicit val girlOrdering  = new Ordering[Girl] {
+    override def compare(x: Girl, y: Girl): Int = {
+      if(x.faceValue &gt; y.faceValue) 1
+      else if (x.faceValue == y.faceValue) {
+        if(x.age &gt; y.age) -1 else 1
+      } else -1
+    }
+  }
+}
+
+object CustomSort {
+
+  def main(args: Array[String]) {
+    val conf = new SparkConf().setAppName(&quot;CustomSort&quot;).setMaster(&quot;local[2]&quot;)
+    val sc = new SparkContext(conf)
+    val rdd1 = sc.parallelize(List((&quot;yuihatano&quot;, 90, 28, 1), (&quot;angelababy&quot;, 90, 27, 2),(&quot;JuJingYi&quot;, 95, 22, 3)))
+    import OrderContext._
+    val rdd2 = rdd1.sortBy(x =&gt; Girl(x._2, x._3), false)
+    println(rdd2.collect().toBuffer)
+    sc.stop()
+  }
+
+}
+</code></pre>]]></content>
+    </entry>
+    
+    <entry>
       <title><![CDATA[Spark1.6—RDD自定义分区器Partitioner]]></title>
       <url>http://spark8.tech/2016/06/21/sparkfqq/</url>
       <content type="html"><![CDATA[<a id="more"></a>
@@ -1033,71 +1800,6 @@ sc.stop()
     </entry>
     
     <entry>
-      <title><![CDATA[Spark1.6—自定义排序规则，对比Hadoop MR]]></title>
-      <url>http://spark8.tech/2016/06/21/sparksortby/</url>
-      <content type="html"><![CDATA[<a id="more"></a>
-<h2 id="需求描述"><a href="#需求描述" class="headerlink" title="需求描述"></a>需求描述</h2><p>使用隐式转换，自定义排序规则</p>
-<h2 id="实现思路"><a href="#实现思路" class="headerlink" title="实现思路"></a>实现思路</h2><p>第一种方式：case class Girl 混入 Ordered<a href="#">Girl</a>接口，实现comapre方法，但是明显的高耦合<br>第二种方式：使用隐式转换，按sortBy要求 传入隐式值girlOrdering，实现解耦和自定义排序<br><img src="/images/sortby.png" alt=""></p>
-<h2 id="代码实现"><a href="#代码实现" class="headerlink" title="代码实现"></a>代码实现</h2><p>第一种方式：</p>
-<pre><code>object CustomSort {
-
-  def main(args: Array[String]) {
-    val conf = new SparkConf().setAppName(&quot;CustomSort&quot;).setMaster(&quot;local[2]&quot;)
-    val sc = new SparkContext(conf)
-    val rdd1 = sc.parallelize(List((&quot;yuihatano&quot;, 90, 28, 1), (&quot;angelababy&quot;, 90, 27, 2),(&quot;JuJingYi&quot;, 95, 22, 3)))
-    import OrderContext._
-    val rdd2 = rdd1.sortBy(x =&gt; Girl(x._2, x._3), false)
-    println(rdd2.collect().toBuffer)
-    sc.stop()
-  }
-
-}
-
-/**
-  * 第一种方式
-  * @param faceValue
-  * @param age
-*/
-case class Girl(val faceValue: Int, val age: Int) extends Ordered[Girl] with Serializable {
-  override def compare(that: Girl): Int = {
-    if(this.faceValue == that.faceValue) {
-      that.age - this.age
-    } else {
-      this.faceValue -that.faceValue
-    }
-  }
-}
-</code></pre><p>第二种方式：</p>
-<pre><code>case class Girl(faceValue: Int, age: Int) extends Serializable
-
-object OrderContext {
-  implicit val girlOrdering  = new Ordering[Girl] {
-    override def compare(x: Girl, y: Girl): Int = {
-      if(x.faceValue &gt; y.faceValue) 1
-      else if (x.faceValue == y.faceValue) {
-        if(x.age &gt; y.age) -1 else 1
-      } else -1
-    }
-  }
-}
-
-object CustomSort {
-
-  def main(args: Array[String]) {
-    val conf = new SparkConf().setAppName(&quot;CustomSort&quot;).setMaster(&quot;local[2]&quot;)
-    val sc = new SparkContext(conf)
-    val rdd1 = sc.parallelize(List((&quot;yuihatano&quot;, 90, 28, 1), (&quot;angelababy&quot;, 90, 27, 2),(&quot;JuJingYi&quot;, 95, 22, 3)))
-    import OrderContext._
-    val rdd2 = rdd1.sortBy(x =&gt; Girl(x._2, x._3), false)
-    println(rdd2.collect().toBuffer)
-    sc.stop()
-  }
-
-}
-</code></pre>]]></content>
-    </entry>
-    
-    <entry>
       <title><![CDATA[Spark1.6— RDD 根据电信基站数据计算用户常在地点]]></title>
       <url>http://spark8.tech/2016/06/20/rdddx/</url>
       <content type="html"><![CDATA[<a id="more"></a>
@@ -1235,182 +1937,6 @@ object CustomSort {
 
 }
 </code></pre>]]></content>
-    </entry>
-    
-    <entry>
-      <title><![CDATA[Scala——使用Currry实现视图界定]]></title>
-      <url>http://spark8.tech/2016/06/18/scalacurry/</url>
-      <content type="html"><![CDATA[<p>\&lt;!–more–><br>上文中使用了视图界定来解决类与类型的耦合以及规则的耦合，那么不使用视图界定可不可以呢？当然是可以的，这次就用柯里化（Curry）+隐式转换实现视图界定和上下文界定同样的效果。<br>代码如下：</p>
-<pre><code>class Girl(val name:String,var age :Int, val faceValue : Int = 99){
-
-}
-object Spark8Predef {
-//T =&gt; Ordered[T]
-implicit def girlToPredef(girl : Girl) = new Ordered[Girl]{
-  override def compare(that: Girl): Int = {
-    if(girl.faceValue == that.faceValue) {
-      that.age - girl.age
-    } else {
-      girl.faceValue - that.faceValue
-    }
-  }
-}
-//T =&gt;ordering[T] 
-implicit object orderingGril extends Ordering[Girl] {
-  override def compare(x: Girl, y: Girl): Int = {
-
-    if (x.faceValue == y.faceValue) {
-      y.age - x.age
-    } else {
-      x.faceValue - y.faceValue
-    }
-  }
-}
-
-}
-
-class ChooseMachine[T] {
-
-  def chooseGirl(a: T, b: T)(implicit ord: T =&gt; Ordered[T]): T = {
-    // T类型要有&gt;方法,就要拥有T =&gt; Ordered[T] 的函数或者方法
-    if (a &gt; b) a else b
-  }
-
-  def choose2(first: T, second: T)(implicit ord : Ordering[T]) : T = {
-    import Ordered.orderingToOrdered
-    if(first &gt; second) first else second
-  }
-}
-
-/**
-  * 想要实现与viewbound一样的功能，传入一个隐式转换函数
-   */
-object ChooseMachine {
-  def main(args: Array[String]) {
-    import Spark8Predef._
-    val chooser = new ChooseMachine[Girl]
-    val g1 = new Girl(&quot;tingting&quot;, 18, 85)
-    val g2 = new Girl(&quot;angelaBaby&quot;, 20, 95)
-    val choose = chooser.chooseGirl(g1, g2)
-
-    println(choose.name)
-  }
-
-}
-</code></pre><p>其实整个代码还是蛮简单的，就是用ChooseMachine的泛型，泛型参数不是视图界定，那么就在ChooseMachine的具体方法上实现柯里化，然后在导入Spark8Predef里面的隐式转换方法，就OK啦。</p>
-]]></content>
-    </entry>
-    
-    <entry>
-      <title><![CDATA[Scala—隐式转换实践]]></title>
-      <url>http://spark8.tech/2016/06/18/scalayszh/</url>
-      <content type="html"><![CDATA[<a id="more"></a>
-<p>业务以最简单的按字段compare为例。文章分为二个部分，第一种方式是没有用隐式转换的代码效果，第二种是用视图界定+隐式转换的代码效果，第三种是用上下文界定+隐式转换的代码效果</p>
-<h2 id="不用隐式转换"><a href="#不用隐式转换" class="headerlink" title="不用隐式转换"></a>不用隐式转换</h2><p>代码如下：     </p>
-<pre><code>class Girl(val name:String,var age :Int, val faceValue : Int = 99) extends Comparable[Girl]{
-  override def compareTo(o: Girl): Girl = {
-    ithis.faceValue - o.faceValue   
-  }
-}
-class ChooseMachine[T &lt;:Comparable[T]] {
-
-  def chooseGirl(a :T,b:T): T ={
-    if(a.compareTo(b) &gt; 0) a else b
-  }
-}
-object Girl{
-  def main(args: Array[String]) {
-val chooser = new ChooseMachine[Girl]
-val g1 = new Girl(&quot;tingting&quot;,18,85)
-val g2 = new Girl(&quot;angelaBaby&quot;,20,95)
-val choose = chooser.chooseGirl(g1,g2)
-println(choose.name)
-}
-</code></pre><p>第一种方式<br>1.这是最原始的方式,ChooseMichine对Girl进行排序,Girl需要继承并实现Comparable接口,并实现compareTo方法。ChooseMichine再在chooseGirl调用compareTo实现比较而得出结果<br>2.那么这样就存在两个问题<br> 一是排序的方式与类耦合在一起,如果我有Boy类需要按同样的方式比较,Boy类又要实现Comparable接口并实现compareTo方法<br> 二是同一类型多种排序方式无法共存?</p>
-<h2 id="用视图界定-隐式转换"><a href="#用视图界定-隐式转换" class="headerlink" title="用视图界定+隐式转换"></a>用视图界定+隐式转换</h2><p>代码如下：</p>
-<pre><code>class Girl(val name:String,var age :Int, val faceValue : Int = 99){
-
-}
-//T &lt;% Ordered[T] 视图界定,可以通过隐式转换实现
-class ChooseMachine[T &lt;% Ordered[T]] {
-  def chooseGirl(a :T,b:T): T ={
-    // T类型要有&gt;方法,就要拥有T =&gt; Ordered[T] 的函数或者方法
-    if(a &gt; b) a else b
-  }
-}
-object Spark8Predef {
-
-  implicit val girlToPredef = (girl : Girl)  =&gt; new Ordered[Girl]{
-      override def compare(that: Girl): Int = {
-        if (girl.faceValue == that.faceValue) {
-          that.age - girl.age
-        } else {
-          girl.faceValue - that.faceValue
-        }
-      }
-    }
-/*//用方法就这样写
-implicit def girlToPredef(girl : Girl) = new Ordered[Girl]{
-  override def compare(that: Girl): Int = {
-    if(girl.faceValue == that.faceValue) {
-      that.age - girl.age
-    } else {
-      girl.faceValue - that.faceValue
-    }
-  }
-}*/    
-}
-def main(args: Array[String]) {
-  import Spark8Predef._
-  val chooser = new ChooseMachine[Girl]
-  val g1 = new Girl(&quot;tingting&quot;, 18, 85)
-  val g2 = new Girl(&quot;angelaBaby&quot;, 20, 95)
-  val choose = chooser.chooseGirl(g1, g2)
-
-  println(choose.name)
-}
-</code></pre><p>第二种方式<br> 1.解决排序与类耦合,使用视图界定,将T类型转换为Ordered[T]类型,<br>  这样就可以实现用不同的类进行比较，new MissRight[Girl],可以换成new MissRight[Boy]<br> 2.二是各种类的比较规则不会和类耦合在一起，只需要在不同程序导入不同的隐式转换就可以实现程序的灵活性。girlToOrdered  也可以写成 boyToOrdered<br> 3.使用T &lt;% Ordered[T] 需要隐式地传入一个T => Ordered<a href="#">T</a>的方法</p>
-<h2 id="用上下文界定-隐式转换"><a href="#用上下文界定-隐式转换" class="headerlink" title="用上下文界定+隐式转换"></a>用上下文界定+隐式转换</h2><p>代码如下</p>
-<pre><code>class Girl(val name:String,var age :Int, val faceValue : Int = 99){
-
-}
-//一个冒号  是Context bound  他需要一个隐式转换的值
-class ChooseMachine [T : Ordering] {
-  def select(first: T, scecond: T): T = {
-    val ord = implicitly[Ordering[T]]
-    if(ord.gt(first, scecond)) first else scecond
-  }
-}
-object Spark8Predef {
-
-/**
-  *用Ordering[T] 代替Ordered,此处隐式的传入一个 Ordering[T]对象
-  */
-implicit object orderingGril extends Ordering[Girl] {
-  override def compare(x: Girl, y: Girl): Int = {
-
-    if (x.faceValue == y.faceValue) {
-      y.age - x.age
-    } else {
-      x.faceValue - y.faceValue
-    }
-  }
-}
-}
-
-object ChooseMachine {
-  def main(args: Array[String]) {
-    import Spark8Predef._
-    val chooser = new ChooseMachine[Girl]
-    val g1 = new Girl(&quot;tingting&quot;, 18, 85)
-    val g2 = new Girl(&quot;angelaBaby&quot;, 20, 95)
-    val choose = chooser.chooseGirl(g1, g2)
-
-    println(choose.name)
-  }
-}
-</code></pre><p>第三种方式与第二种方式实现的效果一样，即类与排序类型的耦合以及类与排序规则的耦合，只是 implicitly[Ordering[T]] 要主动引入</p>
-]]></content>
     </entry>
     
     <entry>
@@ -1637,6 +2163,182 @@ case object CheckTimeOutWorker
   }
 }
 </code></pre>]]></content>
+    </entry>
+    
+    <entry>
+      <title><![CDATA[Scala——使用Currry实现视图界定]]></title>
+      <url>http://spark8.tech/2016/06/18/scalacurry/</url>
+      <content type="html"><![CDATA[<p>\&lt;!–more–><br>上文中使用了视图界定来解决类与类型的耦合以及规则的耦合，那么不使用视图界定可不可以呢？当然是可以的，这次就用柯里化（Curry）+隐式转换实现视图界定和上下文界定同样的效果。<br>代码如下：</p>
+<pre><code>class Girl(val name:String,var age :Int, val faceValue : Int = 99){
+
+}
+object Spark8Predef {
+//T =&gt; Ordered[T]
+implicit def girlToPredef(girl : Girl) = new Ordered[Girl]{
+  override def compare(that: Girl): Int = {
+    if(girl.faceValue == that.faceValue) {
+      that.age - girl.age
+    } else {
+      girl.faceValue - that.faceValue
+    }
+  }
+}
+//T =&gt;ordering[T] 
+implicit object orderingGril extends Ordering[Girl] {
+  override def compare(x: Girl, y: Girl): Int = {
+
+    if (x.faceValue == y.faceValue) {
+      y.age - x.age
+    } else {
+      x.faceValue - y.faceValue
+    }
+  }
+}
+
+}
+
+class ChooseMachine[T] {
+
+  def chooseGirl(a: T, b: T)(implicit ord: T =&gt; Ordered[T]): T = {
+    // T类型要有&gt;方法,就要拥有T =&gt; Ordered[T] 的函数或者方法
+    if (a &gt; b) a else b
+  }
+
+  def choose2(first: T, second: T)(implicit ord : Ordering[T]) : T = {
+    import Ordered.orderingToOrdered
+    if(first &gt; second) first else second
+  }
+}
+
+/**
+  * 想要实现与viewbound一样的功能，传入一个隐式转换函数
+   */
+object ChooseMachine {
+  def main(args: Array[String]) {
+    import Spark8Predef._
+    val chooser = new ChooseMachine[Girl]
+    val g1 = new Girl(&quot;tingting&quot;, 18, 85)
+    val g2 = new Girl(&quot;angelaBaby&quot;, 20, 95)
+    val choose = chooser.chooseGirl(g1, g2)
+
+    println(choose.name)
+  }
+
+}
+</code></pre><p>其实整个代码还是蛮简单的，就是用ChooseMachine的泛型，泛型参数不是视图界定，那么就在ChooseMachine的具体方法上实现柯里化，然后在导入Spark8Predef里面的隐式转换方法，就OK啦。</p>
+]]></content>
+    </entry>
+    
+    <entry>
+      <title><![CDATA[Scala—隐式转换实践]]></title>
+      <url>http://spark8.tech/2016/06/18/scalayszh/</url>
+      <content type="html"><![CDATA[<a id="more"></a>
+<p>业务以最简单的按字段compare为例。文章分为二个部分，第一种方式是没有用隐式转换的代码效果，第二种是用视图界定+隐式转换的代码效果，第三种是用上下文界定+隐式转换的代码效果</p>
+<h2 id="不用隐式转换"><a href="#不用隐式转换" class="headerlink" title="不用隐式转换"></a>不用隐式转换</h2><p>代码如下：     </p>
+<pre><code>class Girl(val name:String,var age :Int, val faceValue : Int = 99) extends Comparable[Girl]{
+  override def compareTo(o: Girl): Girl = {
+    ithis.faceValue - o.faceValue   
+  }
+}
+class ChooseMachine[T &lt;:Comparable[T]] {
+
+  def chooseGirl(a :T,b:T): T ={
+    if(a.compareTo(b) &gt; 0) a else b
+  }
+}
+object Girl{
+  def main(args: Array[String]) {
+val chooser = new ChooseMachine[Girl]
+val g1 = new Girl(&quot;tingting&quot;,18,85)
+val g2 = new Girl(&quot;angelaBaby&quot;,20,95)
+val choose = chooser.chooseGirl(g1,g2)
+println(choose.name)
+}
+</code></pre><p>第一种方式<br>1.这是最原始的方式,ChooseMichine对Girl进行排序,Girl需要继承并实现Comparable接口,并实现compareTo方法。ChooseMichine再在chooseGirl调用compareTo实现比较而得出结果<br>2.那么这样就存在两个问题<br> 一是排序的方式与类耦合在一起,如果我有Boy类需要按同样的方式比较,Boy类又要实现Comparable接口并实现compareTo方法<br> 二是同一类型多种排序方式无法共存?</p>
+<h2 id="用视图界定-隐式转换"><a href="#用视图界定-隐式转换" class="headerlink" title="用视图界定+隐式转换"></a>用视图界定+隐式转换</h2><p>代码如下：</p>
+<pre><code>class Girl(val name:String,var age :Int, val faceValue : Int = 99){
+
+}
+//T &lt;% Ordered[T] 视图界定,可以通过隐式转换实现
+class ChooseMachine[T &lt;% Ordered[T]] {
+  def chooseGirl(a :T,b:T): T ={
+    // T类型要有&gt;方法,就要拥有T =&gt; Ordered[T] 的函数或者方法
+    if(a &gt; b) a else b
+  }
+}
+object Spark8Predef {
+
+  implicit val girlToPredef = (girl : Girl)  =&gt; new Ordered[Girl]{
+      override def compare(that: Girl): Int = {
+        if (girl.faceValue == that.faceValue) {
+          that.age - girl.age
+        } else {
+          girl.faceValue - that.faceValue
+        }
+      }
+    }
+/*//用方法就这样写
+implicit def girlToPredef(girl : Girl) = new Ordered[Girl]{
+  override def compare(that: Girl): Int = {
+    if(girl.faceValue == that.faceValue) {
+      that.age - girl.age
+    } else {
+      girl.faceValue - that.faceValue
+    }
+  }
+}*/    
+}
+def main(args: Array[String]) {
+  import Spark8Predef._
+  val chooser = new ChooseMachine[Girl]
+  val g1 = new Girl(&quot;tingting&quot;, 18, 85)
+  val g2 = new Girl(&quot;angelaBaby&quot;, 20, 95)
+  val choose = chooser.chooseGirl(g1, g2)
+
+  println(choose.name)
+}
+</code></pre><p>第二种方式<br> 1.解决排序与类耦合,使用视图界定,将T类型转换为Ordered[T]类型,<br>  这样就可以实现用不同的类进行比较，new MissRight[Girl],可以换成new MissRight[Boy]<br> 2.二是各种类的比较规则不会和类耦合在一起，只需要在不同程序导入不同的隐式转换就可以实现程序的灵活性。girlToOrdered  也可以写成 boyToOrdered<br> 3.使用T &lt;% Ordered[T] 需要隐式地传入一个T => Ordered<a href="#">T</a>的方法</p>
+<h2 id="用上下文界定-隐式转换"><a href="#用上下文界定-隐式转换" class="headerlink" title="用上下文界定+隐式转换"></a>用上下文界定+隐式转换</h2><p>代码如下</p>
+<pre><code>class Girl(val name:String,var age :Int, val faceValue : Int = 99){
+
+}
+//一个冒号  是Context bound  他需要一个隐式转换的值
+class ChooseMachine [T : Ordering] {
+  def select(first: T, scecond: T): T = {
+    val ord = implicitly[Ordering[T]]
+    if(ord.gt(first, scecond)) first else scecond
+  }
+}
+object Spark8Predef {
+
+/**
+  *用Ordering[T] 代替Ordered,此处隐式的传入一个 Ordering[T]对象
+  */
+implicit object orderingGril extends Ordering[Girl] {
+  override def compare(x: Girl, y: Girl): Int = {
+
+    if (x.faceValue == y.faceValue) {
+      y.age - x.age
+    } else {
+      x.faceValue - y.faceValue
+    }
+  }
+}
+}
+
+object ChooseMachine {
+  def main(args: Array[String]) {
+    import Spark8Predef._
+    val chooser = new ChooseMachine[Girl]
+    val g1 = new Girl(&quot;tingting&quot;, 18, 85)
+    val g2 = new Girl(&quot;angelaBaby&quot;, 20, 95)
+    val choose = chooser.chooseGirl(g1, g2)
+
+    println(choose.name)
+  }
+}
+</code></pre><p>第三种方式与第二种方式实现的效果一样，即类与排序类型的耦合以及类与排序规则的耦合，只是 implicitly[Ordering[T]] 要主动引入</p>
+]]></content>
     </entry>
     
     <entry>
@@ -2368,254 +3070,8 @@ public Map&lt;String, Double&gt; recommend(String userName) {
     </entry>
     
     <entry>
-      <title><![CDATA[Zookeeper-服务器上下线动态感知]]></title>
-      <url>http://spark8.tech/2016/03/11/zkfbs/</url>
-      <content type="html"><![CDATA[<a id="more"></a>
-<p>Zookeeper是一个分布式协调服务<br>在底层其实只提供了两个功能：<br><em>a、管理(存储，读取)用户程序提交的数据；PERSISTANT持久节点</em><br><em>b、并为用户程序提供数据节点监听服务； Ephemeral节点</em></p>
-<h2 id="一、需求描述"><a href="#一、需求描述" class="headerlink" title="一、需求描述"></a>一、需求描述</h2><p>某分布式系统中，主节点可以有多台，可以动态上下线<br>任意一台客户端都能实时感知到主节点服务器的上下线</p>
-<h2 id="二、设计思路"><a href="#二、设计思路" class="headerlink" title="二、设计思路"></a>二、设计思路</h2><p><img src="/images/zkfbs.png" alt="分布式共享锁" title="分布式共享锁"></p>
-<h2 id="三、代码开发"><a href="#三、代码开发" class="headerlink" title="三、代码开发"></a>三、代码开发</h2><h3 id="1-客户端实现"><a href="#1-客户端实现" class="headerlink" title="1. 客户端实现"></a>1. 客户端实现</h3><pre><code>public class DistributedClient {
-    private static final String connectString = &quot;mini1:2181,mini2:2181,mini3:2181&quot;;
-    private static final int sessionTimeout = 2000;
-    private static final String parentNode = &quot;/servers&quot;;
-    // 注意:加volatile的意义何在？先写再读，保证读的结果一致
-    private volatile List&lt;String&gt; serverList;
-    private ZooKeeper zk = null;
-
-    /**
-     * 创建到zk的客户端连接
-     * 
-     * @throws Exception
-     */
-    public void getConnect() throws Exception {
-        zk = new ZooKeeper(connectString, sessionTimeout, new Watcher() {
-            public void process(WatchedEvent event) {
-            // 收到事件通知后的回调函数（应该是我们自己的事件处理逻辑）
-                try {
-                    //重新更新服务器列表，并且注册了监听
-                    getServerList();
-                } catch (Exception e) {
-                }
-            }
-            });
-    }
-
-/**
- * 获取服务器信息列表
- * 
- * @throws Exception
-     */
-    public void getServerList() throws Exception {
-        // 获取服务器子节点信息，并且对父节点进行监听
-        List&lt;String&gt; children = zk.getChildren(parentNode, true);
-
-        // 先创建一个局部的list来存服务器信息
-        List&lt;String&gt; servers = new ArrayList&lt;String&gt;();
-        for (String child : children) {
-            // child只是子节点的节点名
-            byte[] data = zk.getData(parentNode + &quot;/&quot; + child, false, null);
-            servers.add(new String(data));
-        }
-        // 把servers赋值给成员变量serverList，已提供给各业务线程使用
-        serverList = servers;
-
-        //打印服务器列表
-        System.out.println(serverList);
-    }
-
-    /**
-     * 业务功能
-     * @throws InterruptedException
-     */
-    public void handleBussiness() throws InterruptedException {
-        System.out.println(&quot;client start working.....&quot;);
-        Thread.sleep(Long.MAX_VALUE);
-    }
-
-    public static void main(String[] args) throws Exception {
-        // 获取zk连接
-        DistributedClient client = new DistributedClient();
-        client.getConnect();
-        // 获取servers的子节点信息（并监听），从中获取服务器信息列表
-        client.getServerList();
-        // 业务线程启动
-        client.handleBussiness();
-    }
- }
-</code></pre><h3 id="2-服务端实现"><a href="#2-服务端实现" class="headerlink" title="2. 服务端实现"></a>2. 服务端实现</h3><pre><code>public class DistributedServer {
-
-  private static final String CONNECT_STRING   = &quot;mini1:2181,mini2:2181,mini3:2181&quot;;
-  private static final int    SESSION_TIME_OUT = 2000;
-  private static final String PARENT_NODE      = &quot;/servers&quot;;
-
-  private ZooKeeper zk = null;
-
-  /**
-   * 创建到zk的客户端连接
-   *
-   * @throws Exception
-   */
-  public void getConnect() throws Exception {
-
-      zk = new ZooKeeper(CONNECT_STRING, SESSION_TIME_OUT, new Watcher() {
-          public void process(WatchedEvent event) {
-              // 收到事件通知后的回调函数（应该是我们自己的事件处理逻辑）
-              System.out.println(event.getType() + &quot;---&quot; + event.getPath());
-              /*try {
-        zk.getChildren(&quot;/&quot;, true);
-    } catch (Exception e) {
-    }*/
-          }
-      });
-  }
-
-  /**
-   * 向zk集群注册服务器信息
-   * @param hostname
-   * @throws Exception
-   */
-  public void registerServer(String hostname) throws Exception {
-      Stat exists = zk.exists(PARENT_NODE, false);
-      if (exists == null) zk.create(PARENT_NODE, null, Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
-      String path = zk.create(PARENT_NODE + &quot;/server&quot;, hostname.getBytes(), Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL_SEQUENTIAL);
-      System.out.println(hostname + &quot;is online..&quot; + path);
-  }
-
-  /**
-   * 业务功能
-   * @throws InterruptedException
-   */
-  public void handleBussiness(String hostname) throws InterruptedException {
-      System.out.println(hostname + &quot;start working.....&quot;);
-      Thread.sleep(Long.MAX_VALUE);
-  }
-
-  public static void main(String[] args) throws Exception {
-
-      DistributedServer server = new DistributedServer();
-      // 获取zk连接
-      server.getConnect();
-
-      // 利用zk连接注册服务器信息(主机名)
-      server.registerServer(args[0]);
-
-      // 启动业务功能
-      server.handleBussiness(args[0]);
-  }
-</code></pre><p>  }</p>
-]]></content>
-    </entry>
-    
-    <entry>
-      <title><![CDATA[Zookeeper-分布式共享锁]]></title>
-      <url>http://spark8.tech/2016/03/11/zkfbss/</url>
-      <content type="html"><![CDATA[<a id="more"></a>
-<h2 id="一、需求描述"><a href="#一、需求描述" class="headerlink" title="一、需求描述"></a>一、需求描述</h2><p>  在我们自己的分布式业务系统中，可能会存在某种资源，需要被整个系统的各台服务器共享访问，但是只允许一台服务器同时访问</p>
-<h2 id="二、设计思路"><a href="#二、设计思路" class="headerlink" title="二、设计思路"></a>二、设计思路</h2><ol>
-<li>连接zookeeper，process监听子节点变化事件，接收事件按规则写业务逻辑，并重新注册锁</li>
-<li>向zookeeper注册一把锁</li>
-<li>从zk的锁父目录下，获取所有子节点，并且注册对父节点的监听</li>
-<li>如果争抢资源的程序就只有自己，则可以直接去访问共享资源</li>
-<li><p>访问资源后删除锁</p>
-<h2 id="三、代码开发"><a href="#三、代码开发" class="headerlink" title="三、代码开发"></a>三、代码开发</h2><p> public class DistributedClientLock {</p>
-</li>
-</ol>
-<pre><code>// 会话超时
-private static final int SESSION_TIMEOUT = 2000;
-// zookeeper集群地址
-private String hosts = &quot;mini1:2181,mini2:2181,mini3:2181&quot;;
-private String groupNode = &quot;locks&quot;;
-private String subNode = &quot;sub&quot;;
-private boolean haveLock = false;
-
-private ZooKeeper zk;
-// 记录自己创建的子节点路径
-private volatile String thisPath;
-
-/**
- * 连接zookeeper
- */
-public void connectZookeeper() throws Exception {
-    zk = new ZooKeeper(hosts, SESSION_TIMEOUT, new Watcher() {
-        public void process(WatchedEvent event) {
-            try {
-
-                // 判断事件类型，此处只处理子节点变化事件
-                if (event.getType() == EventType.NodeChildrenChanged &amp;&amp; event.getPath().equals(&quot;/&quot; + groupNode)) {
-                    //获取子节点，并对父节点进行监听
-                    List&lt;String&gt; childrenNodes = zk.getChildren(&quot;/&quot; + groupNode, true);
-                    String thisNode = thisPath.substring((&quot;/&quot; + groupNode + &quot;/&quot;).length());
-                    // 去比较是否自己是最小id
-                    Collections.sort(childrenNodes);
-                    if (childrenNodes.indexOf(thisNode) == 0) {
-                        //访问共享资源处理业务，并且在处理完成之后删除锁
-                        doSomething();
-
-                        //重新注册一把新的锁
-                        thisPath = zk.create(&quot;/&quot; + groupNode + &quot;/&quot; + subNode, null, Ids.OPEN_ACL_UNSAFE,
-                                CreateMode.EPHEMERAL_SEQUENTIAL);
-                    }
-                }
-        } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-    });
-
-    // 1、程序一进来就先注册一把锁到zk上
-    thisPath = zk.create(&quot;/&quot; + groupNode + &quot;/&quot; + subNode, null, Ids.OPEN_ACL_UNSAFE,
-            CreateMode.EPHEMERAL_SEQUENTIAL);
-
-    // wait一小会，便于观察
-    Thread.sleep(new Random().nextInt(1000));
-
-    // 从zk的锁父目录下，获取所有子节点，并且注册对父节点的监听
-    List&lt;String&gt; childrenNodes = zk.getChildren(&quot;/&quot; + groupNode, true);
-
-    // 如果争抢资源的程序就只有自己，则可以直接去访问共享资源 
-    if (childrenNodes.size() == 1) {
-        doSomething();
-        thisPath = zk.create(&quot;/&quot; + groupNode + &quot;/&quot; + subNode, null, Ids.OPEN_ACL_UNSAFE,
-                CreateMode.EPHEMERAL_SEQUENTIAL);
-    }
-}
-
-/**
- * 处理业务逻辑，并且在最后释放锁
- */
-private void doSomething() throws Exception {
-    try {
-        System.out.println(&quot;gain lock: &quot; + thisPath);
-        Thread.sleep(2000);
-        // do something
-    } finally {
-        System.out.println(&quot;finished: &quot; + thisPath);
-//删除之前的锁节点
-        zk.delete(this.thisPath, -1);
-    }
-}
-
-public static void main(String[] args) throws Exception {
-    DistributedClientLock dl = new DistributedClientLock();
-    dl.connectZookeeper();
-    Thread.sleep(Long.MAX_VALUE);
-}
-</code></pre><p>}</p>
-]]></content>
-    </entry>
-    
-    <entry>
-      <title><![CDATA[Zookeeper-原理补充]]></title>
-      <url>http://spark8.tech/2016/03/11/zkyuanli/</url>
-      <content type="html"><![CDATA[<a id="more"></a>
-<h2 id="Zookepper的选举机制（保证数据一致性的核心算法paxos）"><a href="#Zookepper的选举机制（保证数据一致性的核心算法paxos）" class="headerlink" title="Zookepper的选举机制（保证数据一致性的核心算法paxos）"></a>Zookepper的选举机制（保证数据一致性的核心算法paxos）</h2><p>以一个简单的例子来说明整个选举的过程.<br>假设有五台服务器组成的zookeeper集群,它们的id从1-5,同时它们都是最新启动的,也就是没有历史数据,在存放数据量这一点上,都是一样的.假设这些服务器依序启动,来看看会发生什么.<br>1) 服务器1启动,此时只有它一台服务器启动了,它发出去的报没有任何响应,所以它的选举状态一直是LOOKING状态<br>2) 服务器2启动,它与最开始启动的服务器1进行通信,互相交换自己的选举结果,由于两者都没有历史数据,所以id值较大的服务器2胜出,但是由于没有达到超过半数以上的服务器都同意选举它(这个例子中的半数以上是3),所以服务器1,2还是继续保持LOOKING状态.<br>3) 服务器3启动,根据前面的理论分析,服务器3成为服务器1,2,3中的老大,而与上面不同的是,此时有三台服务器选举了它,所以它成为了这次选举的leader.<br>4) 服务器4启动,根据前面的分析,理论上服务器4应该是服务器1,2,3,4中最大的,但是由于前面已经有半数以上的服务器选举了服务器3,所以它只能接收当小弟的命了.<br>5) 服务器5启动,同4一样,当小弟.</p>
-<h2 id="非全新集群的选举机制-数据恢复"><a href="#非全新集群的选举机制-数据恢复" class="headerlink" title="非全新集群的选举机制(数据恢复)"></a>非全新集群的选举机制(数据恢复)</h2><p>那么，初始化的时候，是按照上述的说明进行选举的，但是当zookeeper运行了一段时间之后，有机器down掉，重新选举时，选举过程就相对复杂了。<br>需要加入数据version、leader id和逻辑时钟。<br>数据version：数据新的version就大，数据每次更新都会更新version。<br>Leader id：就是我们配置的myid中的值，每个机器一个。<br>逻辑时钟：这个值从0开始递增,每次选举对应一个值,也就是说:  如果在同一次选举中,那么这个值应该是一致的 ;  逻辑时钟值越大,说明这一次选举leader的进程更新.<br>选举的标准就变成：<br>1、逻辑时钟小的选举结果被忽略，重新投票<br>2、统一逻辑时钟后，数据id大的胜出<br>3、数据id相同的情况下，leader id大的胜出<br>根据这个规则选出leader。</p>
-]]></content>
-    </entry>
-    
-    <entry>
       <title><![CDATA[Hadoop2.x——关于HDFS一些有意思的总结]]></title>
-      <url>http://spark8.tech/2015/11/11/hdfs/</url>
+      <url>http://spark8.tech/2015/06/23/hdfs/</url>
       <content type="html"><![CDATA[<a id="more"></a>
 <h2 id="1-HDFS-文件存放"><a href="#1-HDFS-文件存放" class="headerlink" title="1. HDFS 文件存放"></a>1. HDFS 文件存放</h2><p>namenode   管理元数据（文件路径、副本数、文件的blockid，位置等信息）<br>datanode   用户的文件存放在datanode上，放在配置的目录dfs.datanode.data.dir下<br>Q：namenode的fsimage和edits.xml文件中有没有文件路径呢？<br>A：系统中数据块的位置不是由namenode维护的，里面只存blockid，name node启动时加载fsimage和edits的各项操作，namenode启动时首先运行于安全模式，即对于客户端是只读的。安全模式下namenode不会向datanode发出任何块复制或删除指令，这时是没有必要的，namenode只需等待更多的datanode发送块列表信息即可，当接收到足够多的块位置信息，满足“最小复本条件”后，namenode会在30秒后退出安全模式。<br> hdfs  dfsadmin -report命令可以查看hdfs集群的状态</p>
 <blockquote>
@@ -2631,362 +3087,8 @@ public static void main(String[] args) throws Exception {
     </entry>
     
     <entry>
-      <title><![CDATA[Flume——自定义拦截器(脱敏处理)]]></title>
-      <url>http://spark8.tech/2015/10/28/flumetuomin/</url>
-      <content type="html"><![CDATA[<a id="more"></a>
-<h2 id="需求描述"><a href="#需求描述" class="headerlink" title="需求描述"></a>需求描述</h2><p>有源数据<br><img src="/images/flumewtm.png" alt="" title="flumewtm"><br>要求进行脱敏处理，第1列手机号加密传输，再取2、4、6、7列数据</p>
-<h2 id="设计思路"><a href="#设计思路" class="headerlink" title="设计思路"></a>设计思路</h2><p>自定义Flume拦截器，过滤掉不需要的字段，并对指定字段加密处理，将源数据进行预处理。减少数据传输量，降低存储开销。<br>技术方案核心包括二部分：</p>
-<ol>
-<li>编写java代码，自定义拦截器；</li>
-<li>修改Flume的配置信息<h2 id="代码实现"><a href="#代码实现" class="headerlink" title="代码实现"></a>代码实现</h2><h3 id="第一部分"><a href="#第一部分" class="headerlink" title="第一部分"></a>第一部分</h3></li>
-<li>定义一个类CustomParameterInterceptor实现Interceptor接口。</li>
-<li>在CustomParameterInterceptor类中定义变量，这些变量是需要到 Flume的配置文件中进行配置使用的。每一行字段间的分隔符(fields_separator)、通过分隔符分隔后，所需要列字段的下标（indexs）、多个下标使用的分隔符（indexs_separator)、多个下标使用的分隔符（indexs_separator)。</li>
-<li>添加CustomParameterInterceptor的有参构造方法。并对相应的变量进行处理。将配置文件中传过来的unicode编码进行转换为字符串。</li>
-<li>写具体的要处理的逻辑intercept()方法，一个是单个处理的，一个是批量处理。</li>
-<li>接口中定义了一个内部接口Builder，在configure方法中，进行一些参数配置。并给出，在flume的conf中没配置一些参数时，给出其默认值。通过其builder方法，返回一个CustomParameterInterceptor对象。</li>
-<li><p>定义一个静态类，类中封装MD5加密方法<br>通过以上步骤，自定义拦截器的代码开发已完成，然后打包成jar， 放到Flume的根目录下的lib中</p>
-<pre><code>package cn.holley.interceptor;
-
-import static cn.holley.interceptor.CustomParameterInterceptor.Constants.FIELD_SEPARATOR;
-import static cn.holley.interceptor.CustomParameterInterceptor.Constants.DEFAULT_FIELD_SEPARATOR;
-import static cn.holley.interceptor.CustomParameterInterceptor.Constants.INDEXS;
-import static cn.holley.interceptor.CustomParameterInterceptor.Constants.DEFAULT_INDEXS;
-import static cn.holley.interceptor.CustomParameterInterceptor.Constants.INDEXS_SEPARATOR;
-import static cn.holley.interceptor.CustomParameterInterceptor.Constants.DEFAULT_INDEXS_SEPARATOR;
-import static cn.holley.interceptor.CustomParameterInterceptor.Constants.ENCRYPTED_FIELD_INDEX;
-import static cn.holley.interceptor.CustomParameterInterceptor.Constants.DEFAULT_ENCRYPTED_FIELD_INDEX;
-
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
-import org.apache.flume.Context;
-import org.apache.flume.Event;
-import org.apache.flume.interceptor.Interceptor;
-import org.junit.Test;
-
-import com.google.common.base.Charsets;
-
-/**
- *
- */
-public class CustomParameterInterceptor  implements Interceptor{    
-
-    /** The field_separator.指明每一行字段的分隔符 */
-    private final String fields_separator;
-
-    /** The indexs.通过分隔符分割后，指明需要那列的字段 下标*/
-    private final String indexs;
-
-    /** The indexs_separator. 多个下标的分隔符*/
-    private final String indexs_separator;
-
-/**
- * 
- * @param regex
- * @param field_separator
- * @param indexs
- * @param indexs_separator
- */
-public CustomParameterInterceptor( String fields_separator,
-        String indexs, String indexs_separator,String encrypted_field_index) {
-    String f = fields_separator.trim();
-    String i = indexs_separator.trim();
-    this.indexs = indexs;
-    this.encrypted_field_index=encrypted_field_index.trim();
-    if (!f.equals(&quot;&quot;)) {
-        f = UnicodeToString(f);
-    }
-    this.fields_separator =f;
-    if (!i.equals(&quot;&quot;)) {
-        i = UnicodeToString(i);
-    }
-    this.indexs_separator = i;
-}
-
-/*
- * 
- * \t 制表符 (&apos;\u0009&apos;) \n 新行（换行）符 (&apos; &apos;) \r 回车符 (&apos; &apos;) \f 换页符 (&apos;\u000C&apos;) \a 报警
- * (bell) 符 (&apos;\u0007&apos;) \e 转义符 (&apos;\u001B&apos;) \cx  空格(\u0020)对应于 x 的控制符
- * 
- * @param str
- * @return
- * @data:2015-6-30
- */
-
-/** The encrypted_field_index. 需要加密的字段下标*/
-private final String encrypted_field_index;
-</code></pre></li>
-</ol>
-<pre><code>public static String UnicodeToString(String str) {
-    Pattern pattern = Pattern.compile(&quot;(\\\\u(\\p{XDigit}{4}))&quot;);
-    Matcher matcher = pattern.matcher(str);
-    char ch;
-    while (matcher.find()) {
-        ch = (char) Integer.parseInt(matcher.group(2), 16);
-        str = str.replace(matcher.group(1), ch + &quot;&quot;);
-    }
-    return str;
-}
-
-/*
- * @see org.apache.flume.interceptor.Interceptor#intercept(org.apache.flume.Event)
- * 单个event拦截逻辑
- */
-@Override
-public Event intercept(Event event) {
-    if (event == null) {
-        return null;
-    }        
-    try {
-        String line = new String(event.getBody(), Charsets.UTF_8);
-        String[] fields_spilts = line.split(fields_separator);
-        String[] indexs_split = indexs.split(indexs_separator);
-        String newLine=&quot;&quot;;
-        for (int i = 0; i &lt; indexs_split.length; i++) {
-            int parseInt = Integer.parseInt(indexs_split[i]);    
-            //对加密字段进行加密
-            if(!&quot;&quot;.equals(encrypted_field_index)&amp;&amp;encrypted_field_index.equals(indexs_split[i])){
-                newLine+=StringUtils.GetMD5Code(fields_spilts[parseInt]);                
-            }else{                    
-                newLine+=fields_spilts[parseInt];
-            }
-
-            if(i!=indexs_split.length-1){
-                newLine+=fields_separator;
-            }
-        }            
-        event.setBody(newLine.getBytes(Charsets.UTF_8));
-        return event;
-    } catch (Exception e) {
-        return event;
-    }        
-}
-
-/* 
- * @see org.apache.flume.interceptor.Interceptor#intercept(java.util.List)
- * 批量event拦截逻辑
- */
-@Override
-public List&lt;Event&gt; intercept(List&lt;Event&gt; events) {
-    List&lt;Event&gt; out = new ArrayList&lt;Event&gt;();
-    for (Event event : events) {
-        Event outEvent = intercept(event);
-        if (outEvent != null) {
-            out.add(outEvent);
-        }
-    }
-    return out;
-}
-
-/* 
- * @see org.apache.flume.interceptor.Interceptor#initialize()
- */
-@Override
-public void initialize() {
-    // TODO Auto-generated method stub
-
-}
-
-/*
- * @see org.apache.flume.interceptor.Interceptor#close()
- */
-@Override
-public void close() {
-    // TODO Auto-generated method stub
-
-}
-
-
-/**
- * 相当于自定义Interceptor的工厂类
- * 在flume采集配置文件中通过制定该Builder来创建Interceptor对象
- * 可以在Builder中获取、解析flume采集配置文件中的拦截器Interceptor的自定义参数：
- * 字段分隔符，字段下标，下标分隔符、加密字段下标 ...等
- * @author
- *
- */
-public static class Builder implements Interceptor.Builder {
-
-    /** The fields_separator.指明每一行字段的分隔符 */
-    private  String fields_separator;
-
-    /** The indexs.通过分隔符分割后，指明需要那列的字段 下标*/
-    private  String indexs;
-
-    /** The indexs_separator. 多个下标下标的分隔符*/
-    private  String indexs_separator;
-
-    /** The encrypted_field. 需要加密的字段下标*/
-    private  String encrypted_field_index; 
-
-    /* 
-     * @see org.apache.flume.conf.Configurable#configure(org.apache.flume.Context)
-     */
-    @Override
-    public void configure(Context context) {
-        fields_separator = context.getString(FIELD_SEPARATOR, DEFAULT_FIELD_SEPARATOR);
-        indexs = context.getString(INDEXS, DEFAULT_INDEXS);
-        indexs_separator = context.getString(INDEXS_SEPARATOR, DEFAULT_INDEXS_SEPARATOR);
-        encrypted_field_index= context.getString(ENCRYPTED_FIELD_INDEX, DEFAULT_ENCRYPTED_FIELD_INDEX);
-
-    }
-
-    /* 
-     * @see org.apache.flume.interceptor.Interceptor.Builder#build()
-     */
-    @Override
-    public Interceptor build() {
-
-        return new CustomParameterInterceptor(fields_separator, indexs, indexs_separator,encrypted_field_index);
-    }
-}    
-
-
-/**
- * 常量
- *
- */
-public static class Constants {
-    /** The Constant FIELD_SEPARATOR. */
-    public static final String FIELD_SEPARATOR = &quot;fields_separator&quot;;
-
-    /** The Constant DEFAULT_FIELD_SEPARATOR. */
-    public static final String DEFAULT_FIELD_SEPARATOR =&quot; &quot;;
-
-    /** The Constant INDEXS. */
-    public static final String INDEXS = &quot;indexs&quot;;
-
-    /** The Constant DEFAULT_INDEXS. */
-    public static final String DEFAULT_INDEXS = &quot;0&quot;;
-
-    /** The Constant INDEXS_SEPARATOR. */
-    public static final String INDEXS_SEPARATOR = &quot;indexs_separator&quot;;
-
-    /** The Constant DEFAULT_INDEXS_SEPARATOR. */
-    public static final String DEFAULT_INDEXS_SEPARATOR = &quot;,&quot;;
-
-    /** The Constant ENCRYPTED_FIELD_INDEX. */
-    public static final String ENCRYPTED_FIELD_INDEX = &quot;encrypted_field_index&quot;;
-
-    /** The Constant DEFAUL_TENCRYPTED_FIELD_INDEX. */
-    public static final String DEFAULT_ENCRYPTED_FIELD_INDEX = &quot;&quot;;
-
-    /** The Constant PROCESSTIME. */
-    public static final String PROCESSTIME = &quot;processTime&quot;;
-    /** The Constant PROCESSTIME. */
-    public static final String DEFAULT_PROCESSTIME = &quot;a&quot;;
-
-}
-
-
-
-/**
- * 工具类：字符串md5加密
- */
-public static class StringUtils {
-       // 全局数组
-    private final static String[] strDigits = { &quot;0&quot;, &quot;1&quot;, &quot;2&quot;, &quot;3&quot;, &quot;4&quot;, &quot;5&quot;,
-            &quot;6&quot;, &quot;7&quot;, &quot;8&quot;, &quot;9&quot;, &quot;a&quot;, &quot;b&quot;, &quot;c&quot;, &quot;d&quot;, &quot;e&quot;, &quot;f&quot; };
-
-    // 返回形式为数字跟字符串
-    private static String byteToArrayString(byte bByte) {
-        int iRet = bByte;
-        // System.out.println(&quot;iRet=&quot;+iRet);
-        if (iRet &lt; 0) {
-            iRet += 256;
-        }
-        int iD1 = iRet / 16;
-        int iD2 = iRet % 16;
-        return strDigits[iD1] + strDigits[iD2];
-    }
-
-    // 返回形式只为数字
-    private static String byteToNum(byte bByte) {
-        int iRet = bByte;
-        System.out.println(&quot;iRet1=&quot; + iRet);
-        if (iRet &lt; 0) {
-            iRet += 256;
-        }
-        return String.valueOf(iRet);
-    }
-
-    // 转换字节数组为16进制字串
-    private static String byteToString(byte[] bByte) {
-        StringBuffer sBuffer = new StringBuffer();
-        for (int i = 0; i &lt; bByte.length; i++) {
-            sBuffer.append(byteToArrayString(bByte[i]));
-        }
-        return sBuffer.toString();
-    }
-
-    public static String GetMD5Code(String strObj) {
-        String resultString = null;
-        try {
-            resultString = new String(strObj);
-            MessageDigest md = MessageDigest.getInstance(&quot;MD5&quot;);
-            // md.digest() 该函数返回值为存放哈希值结果的byte数组
-            resultString = byteToString(md.digest(strObj.getBytes()));
-        } catch (NoSuchAlgorithmException ex) {
-            ex.printStackTrace();
-        }
-        return resultString;
-    }
-    }
-
-}
-</code></pre><h3 id="第二部分"><a href="#第二部分" class="headerlink" title="第二部分"></a>第二部分</h3><p>修改Flume的配置信息<br>        a1.channels = c1<br>        a1.sources = r1<br>        a1.sinks = s1</p>
-<pre><code>channel
-a1.channels.c1.type = memory
-a1.channels.c1.capacity=100000
-a1.channels.c1.transactionCapacity=50000
-
-source
-a1.sources.r1.channels = c1
-a1.sources.r1.type = spooldir
-a1.sources.r1.spoolDir = /home/hadoop/logs/
-a1.sources.r1.batchSize= 50
-a1.sources.r1.inputCharset = UTF-8
-
-a1.sources.r1.interceptors =i1 i2
-a1.sources.r1.interceptors.i1.type =cn.holley.interceptor.CustomParameterInterceptor$Builder
-a1.sources.r1.interceptors.i1.fields_separator=\\u0009
-a1.sources.r1.interceptors.i1.indexs =0,1,3,5,6
-a1.sources.r1.interceptors.i1.indexs_separator =\\u002c
-a1.sources.r1.interceptors.i1.encrypted_field_index =0
-
-a1.sources.r1.interceptors.i2.type = org.apache.flume.interceptor.TimestampInterceptor$Builder
-
-
-sink
-a1.sinks.s1.channel = c1
-a1.sinks.s1.type = hdfs
-a1.sinks.s1.hdfs.path =hdfs://hdp-node-01:9000/flume/%Y%m%d
-a1.sinks.s1.hdfs.filePrefix = event
-a1.sinks.s1.hdfs.fileSuffix = .log
-a1.sinks.s1.hdfs.rollSize = 10485760
-a1.sinks.s1.hdfs.rollInterval =20
-a1.sinks.s1.hdfs.rollCount = 0
-a1.sinks.s1.hdfs.batchSize = 1500
-a1.sinks.s1.hdfs.round = true
-a1.sinks.s1.hdfs.roundUnit = minute
-a1.sinks.s1.hdfs.threadsPoolSize = 25
-a1.sinks.s1.hdfs.useLocalTimeStamp = true
-a1.sinks.s1.hdfs.minBlockReplicas = 1
-a1.sinks.s1.hdfs.fileType =DataStream
-a1.sinks.s1.hdfs.writeFormat = Text
-a1.sinks.s1.hdfs.callTimeout = 60000
-a1.sinks.s1.hdfs.idleTimeout =60
-</code></pre><h2 id="实现效果"><a href="#实现效果" class="headerlink" title="实现效果"></a>实现效果</h2><p><img src="/images/result1.png" alt="" title="result1"><br><img src="/images/result2.png" alt="" title="result2"></p>
-]]></content>
-    </entry>
-    
-    <entry>
       <title><![CDATA[Flume——日志采集与汇总]]></title>
-      <url>http://spark8.tech/2015/10/24/flumerizhi/</url>
+      <url>http://spark8.tech/2015/06/23/flumerizhi/</url>
       <content type="html"><![CDATA[<a id="more"></a>
 <h2 id="需求描述"><a href="#需求描述" class="headerlink" title="需求描述"></a>需求描述</h2><p>A、B两台日志服务机器实时生产日志主要类型为access.log、nginx.log、web.log<br>现在要求：<br>把A、B 机器中的access.log、nginx.log、web.log 采集汇总到C机器上然后统一收集到hdfs中。<br>但是在hdfs中要求的目录为：<br>/source/logs/access/20160101/<strong> /source/logs/nginx/20160101/</strong> /source/logs/web/20160101/** ## 设计思路<br>难点在于区分日志服务器发送过来的不同文件夹，使用拦截器<br><img src="/images/flume1.png" alt="" title="flume"><br>flume架构如下图所示<br><img src="/images/flume2.png" alt="" title="flume"></p>
 <h2 id="代码实现"><a href="#代码实现" class="headerlink" title="代码实现"></a>代码实现</h2><p>flume主要是通过配置实现</p>
@@ -3094,7 +3196,7 @@ a1.sinks.k1.channel = c1
     
     <entry>
       <title><![CDATA[Hive——transform]]></title>
-      <url>http://spark8.tech/2015/10/20/transform/</url>
+      <url>http://spark8.tech/2015/06/23/transform/</url>
       <content type="html"><![CDATA[<a id="more"></a>
 <h2 id="需求描述"><a href="#需求描述" class="headerlink" title="需求描述"></a>需求描述</h2><p>如果你不想写UDP函数，而实现的功能很容易用脚本实现，那么尝试下transform也是个不错的选择。<br>还是以上文中jsonParse的案例来说明。</p>
 <h2 id="思路及实现"><a href="#思路及实现" class="headerlink" title="思路及实现"></a>思路及实现</h2><ol>
@@ -3129,108 +3231,6 @@ FROM t_rating;
 </code></pre></li>
 </ol>
 ]]></content>
-    </entry>
-    
-    <entry>
-      <title><![CDATA[Hive ——内置函数与UDF实现]]></title>
-      <url>http://spark8.tech/2015/10/19/udf/</url>
-      <content type="html"><![CDATA[<a id="more"></a>
-<h2 id="需求描述"><a href="#需求描述" class="headerlink" title="需求描述"></a>需求描述</h2><p>有原始json数据如下：<br><img src="/images/json1.png" alt="" title="json1"><br>需要将数据导入到hive数据仓库中<br><img src="/images/biao1.png" alt="" title="biao"></p>
-<h2 id="代码实现"><a href="#代码实现" class="headerlink" title="代码实现"></a>代码实现</h2><h3 id="内置函数get-json-object"><a href="#内置函数get-json-object" class="headerlink" title="内置函数get_json_object"></a>内置函数get_json_object</h3><pre><code>select get_json_object(line,&apos;$.movie&apos;) as moive,get_json_object(line,&apos;$.rate&apos;) as rate  from t_json limit 10;
-</code></pre><h3 id="UDF实现"><a href="#UDF实现" class="headerlink" title="UDF实现"></a>UDF实现</h3><ol>
-<li><p>先开发一个java类，继承UDF，并重载evaluate方法<br>JsonParser</p>
-<pre><code>public class JsonParser extends UDF {
-
-public String evaluate(String jsonLine) {
-
-ObjectMapper objectMapper = new ObjectMapper();
-
-try {
-MovieRateBean bean = objectMapper.readValue(jsonLine, MovieRateBean.class);
-return bean.toString();
-} catch (Exception e) {
-
-}
-return &quot;&quot;;
-}
-
-//public static void main(String[] args) throws JsonParseException, JsonMappingException, IOException {
-//    String str = &quot;{\&quot;movie\&quot;:\&quot;1193\&quot;,\&quot;rate\&quot;:\&quot;5\&quot;,\&quot;timeStamp\&quot;:\&quot;978300760\&quot;,\&quot;uid\&quot;:\&quot;1\&quot;}&quot;;
-//    ObjectMapper objectMapper = new ObjectMapper();
-//    MovieRateBean readValue = objectMapper.readValue(str, MovieRateBean.class);
-//    System.out.println(readValue);
-//}
-}
-</code></pre><p>MovieRateBean</p>
-<pre><code>//{&quot;movie&quot;:&quot;1721&quot;,&quot;rate&quot;:&quot;3&quot;,&quot;timeStamp&quot;:&quot;965440048&quot;,&quot;uid&quot;:&quot;5114&quot;}
-public class MovieRateBean {
-
-private String movie;
-private String rate;
-private String timeStamp;
-private String uid;
-public String getMovie() {
-return movie;
-}
-public void setMovie(String movie) {
-this.movie = movie;
-}
-public String getRate() {
-return rate;
-}
-public void setRate(String rate) {
-this.rate = rate;
-}
-public String getTimeStamp() {
-return timeStamp;
-}
-public void setTimeStamp(String timeStamp) {
-this.timeStamp = timeStamp;
-}
-public String getUid() {
-return uid;
-}
-public void setUid(String uid) {
-this.uid = uid;
-}
-@Override
-public String toString() {
-return movie + &quot;\t&quot; + rate + &quot;\t&quot; + timeStamp + &quot;\t&quot; + uid;
-}
-}
-</code></pre></li>
-<li><p>打成jar包上传到服务器</p>
-</li>
-<li>将jar包添加到hive的classpath<pre><code>hive&gt;add JAR /home/hadoop/udf.jar;
-</code></pre></li>
-<li>创建临时函数与开发好的java class关联<pre><code>Hive&gt;create temporary function jsonParse as ‘cn.holley.udf.JsonParse&apos;;
-</code></pre></li>
-<li>在hql中使用自定义的函数parseJson<pre><code>select split( jsonParse(line),’\t’)\[0] as movie, split( jsonParse(line),’\\t’)[1] as rate, split( jsonParse(line),’\t’)[2] as timeStamp, split( jsonParse(line),’\t’)[3] as uid from t_json;
-</code></pre></li>
-</ol>
-]]></content>
-    </entry>
-    
-    <entry>
-      <title><![CDATA[Hive——级联求和accumulate]]></title>
-      <url>http://spark8.tech/2015/10/18/hivejilian/</url>
-      <content type="html"><![CDATA[<a id="more"></a>
-<h2 id="需求描述"><a href="#需求描述" class="headerlink" title="需求描述"></a>需求描述</h2><p>有如下访客访问次数统计表 t_access_times<br><img src="/images/hiveacc.png" alt="" title="hiveacc"><br>需要输出报表：t_access_times_accumulate<br><img src="/images/hiveacce.png" alt="" title="hiveacce"></p>
-<h2 id="设计思路"><a href="#设计思路" class="headerlink" title="设计思路"></a>设计思路</h2><ol>
-<li>自己和自己join</li>
-<li>join后记录中取B表月份小于或者等于A表的月份薪酬和<br>此思路适合大部分级联求和案例。</li>
-</ol>
-<h2 id="代码实现"><a href="#代码实现" class="headerlink" title="代码实现"></a>代码实现</h2><pre><code>select A.username,A.month,max(A.salary) as salary,sum(B.salary) as accumulate
-  from 
-    (select username,month,sum(salary) as salary from t_access_times group by username,month) A 
-    inner join 
-    (select username,month,sum(salary) as salary from t_access_times group by username,month) B
-    on
-    A.username=B.username
-    where B.month &lt;= A.month
-    group by A.username,A.month
-    order by A.username,A.month;
-</code></pre>]]></content>
     </entry>
     
   
