@@ -4,6 +4,206 @@
 
     
   <url>
+    <loc>http://spark8.tech/2016/06/28/webssls2/</loc>
+    <lastmod>2016-07-17T12:40:04.000Z</lastmod>
+    <data>
+        <display>
+        <title>SparkStreaming—Weblog流式实时统计(二)</title>
+        <pubTime>2016-06-28T13:15:12.000Z</pubTime>
+        
+        <tag>Spark</tag>
+         
+         
+           
+             
+              <breadCrumb title="Spark" url="http://spark8.tech/categories/Spark/"/>
+          
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
+    <loc>http://spark8.tech/2016/06/25/pythontoscala1/</loc>
+    <lastmod>2016-07-17T12:39:44.000Z</lastmod>
+    <data>
+        <display>
+        <title>SparkSQL—金融行业应用案例(一)</title>
+        <pubTime>2016-06-25T13:15:12.000Z</pubTime>
+        
+        <tag>Spark</tag>
+         
+         
+           
+             
+              <breadCrumb title="Spark" url="http://spark8.tech/categories/Spark/"/>
+          
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
+    <loc>http://spark8.tech/2016/06/26/pythontoscala2/</loc>
+    <lastmod>2016-07-17T12:39:17.000Z</lastmod>
+    <data>
+        <display>
+        <title>SparkSQL—金融行业应用案例(二)</title>
+        <pubTime>2016-06-26T13:15:12.000Z</pubTime>
+        
+        <tag>Spark</tag>
+         
+         
+           
+             
+              <breadCrumb title="Spark" url="http://spark8.tech/categories/Spark/"/>
+          
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
+    <loc>http://spark8.tech/2016/06/28/webssls3/</loc>
+    <lastmod>2016-07-17T12:39:04.000Z</lastmod>
+    <data>
+        <display>
+        <title>SparkStreaming—Weblog流式实时统计(三)</title>
+        <pubTime>2016-06-28T13:15:12.000Z</pubTime>
+        
+        <tag>Spark</tag>
+         
+         
+           
+             
+              <breadCrumb title="Spark" url="http://spark8.tech/categories/Spark/"/>
+          
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
+    <loc>http://spark8.tech/2016/06/27/lmsjfx/</loc>
+    <lastmod>2016-07-17T12:38:31.000Z</lastmod>
+    <data>
+        <display>
+        <title>SparkSQL—淘宝商品类目数据分析</title>
+        <pubTime>2016-06-27T13:15:12.000Z</pubTime>
+        
+        <tag>Spark</tag>
+         
+         
+           
+             
+              <breadCrumb title="Spark" url="http://spark8.tech/categories/Spark/"/>
+          
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
+    <loc>http://spark8.tech/2016/06/28/webssls1/</loc>
+    <lastmod>2016-07-17T12:38:09.000Z</lastmod>
+    <data>
+        <display>
+        <title>SparkStreaming—Weblog流式实时统计(一)</title>
+        <pubTime>2016-06-28T13:15:12.000Z</pubTime>
+        
+        <tag>Spark</tag>
+         
+         
+           
+             
+              <breadCrumb title="Spark" url="http://spark8.tech/categories/Spark/"/>
+          
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
+    <loc>http://spark8.tech/2016/06/24/yxyy1/</loc>
+    <lastmod>2016-07-17T12:11:18.000Z</lastmod>
+    <data>
+        <display>
+        <title>游戏运营分析(一) — 业务说明及技术架构</title>
+        <pubTime>2016-06-24T13:15:12.000Z</pubTime>
+        
+        <tag>Spark</tag>
+         
+         
+           
+             
+              <breadCrumb title="Spark" url="http://spark8.tech/categories/Spark/"/>
+          
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
+    <loc>http://spark8.tech/2016/06/24/yxyy2/</loc>
+    <lastmod>2016-07-17T12:11:15.000Z</lastmod>
+    <data>
+        <display>
+        <title>游戏运营分析(二) — 数据采集阶段</title>
+        <pubTime>2016-06-24T13:15:12.000Z</pubTime>
+        
+        <tag>Spark</tag>
+         
+         
+           
+             
+              <breadCrumb title="Spark" url="http://spark8.tech/categories/Spark/"/>
+          
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
+    <loc>http://spark8.tech/2016/06/25/yxyy3/</loc>
+    <lastmod>2016-07-17T12:11:12.000Z</lastmod>
+    <data>
+        <display>
+        <title>游戏运营分析(三) — 离线与实时业务线</title>
+        <pubTime>2016-06-25T13:15:12.000Z</pubTime>
+        
+        <tag>Spark</tag>
+         
+         
+           
+             
+              <breadCrumb title="Spark" url="http://spark8.tech/categories/Spark/"/>
+          
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
+    <loc>http://spark8.tech/2016/06/25/yxyy4/</loc>
+    <lastmod>2016-07-17T12:11:08.000Z</lastmod>
+    <data>
+        <display>
+        <title>游戏运营分析(四) — web及数据展示</title>
+        <pubTime>2016-06-25T13:15:12.000Z</pubTime>
+        
+        <tag>Spark</tag>
+         
+         
+           
+             
+              <breadCrumb title="Spark" url="http://spark8.tech/categories/Spark/"/>
+          
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
     <loc>http://spark8.tech/2016/06/23/hivejilian/</loc>
     <lastmod>2016-07-10T10:58:51.000Z</lastmod>
     <data>
@@ -545,9 +745,9 @@
         <title>日志监控告警系统（一）</title>
         <pubTime>2016-05-17T15:25:22.000Z</pubTime>
         
-        <tag>storm</tag>
-         
         <tag>kafka</tag>
+         
+        <tag>storm</tag>
          
         <tag>mysql</tag>
          
@@ -693,9 +893,9 @@
         
         <tag>flume</tag>
          
-        <tag>storm</tag>
-         
         <tag>kafka</tag>
+         
+        <tag>storm</tag>
          
          
            
