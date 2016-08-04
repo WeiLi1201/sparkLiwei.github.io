@@ -4,216 +4,16 @@
 
     
   <url>
-    <loc>http://spark8.tech/2016/06/28/webssls2/</loc>
-    <lastmod>2016-07-17T12:40:04.000Z</lastmod>
+    <loc>http://spark8.tech/2015/06/22/hadoopha/</loc>
+    <lastmod>2016-08-04T14:50:36.000Z</lastmod>
     <data>
         <display>
-        <title>SparkStreaming—Weblog流式实时统计(二)</title>
-        <pubTime>2016-06-28T13:15:12.000Z</pubTime>
-        
-        <tag>Spark</tag>
-         
-         
-           
-             
-              <breadCrumb title="Spark" url="http://spark8.tech/categories/Spark/"/>
-          
-        </display>
-    </data>
-    </url>
-
-    
-  <url>
-    <loc>http://spark8.tech/2016/06/25/pythontoscala1/</loc>
-    <lastmod>2016-07-17T12:39:44.000Z</lastmod>
-    <data>
-        <display>
-        <title>SparkSQL—金融行业应用案例(一)</title>
-        <pubTime>2016-06-25T13:15:12.000Z</pubTime>
-        
-        <tag>Spark</tag>
-         
-         
-           
-             
-              <breadCrumb title="Spark" url="http://spark8.tech/categories/Spark/"/>
-          
-        </display>
-    </data>
-    </url>
-
-    
-  <url>
-    <loc>http://spark8.tech/2016/06/26/pythontoscala2/</loc>
-    <lastmod>2016-07-17T12:39:17.000Z</lastmod>
-    <data>
-        <display>
-        <title>SparkSQL—金融行业应用案例(二)</title>
-        <pubTime>2016-06-26T13:15:12.000Z</pubTime>
-        
-        <tag>Spark</tag>
-         
-         
-           
-             
-              <breadCrumb title="Spark" url="http://spark8.tech/categories/Spark/"/>
-          
-        </display>
-    </data>
-    </url>
-
-    
-  <url>
-    <loc>http://spark8.tech/2016/06/28/webssls3/</loc>
-    <lastmod>2016-07-17T12:39:04.000Z</lastmod>
-    <data>
-        <display>
-        <title>SparkStreaming—Weblog流式实时统计(三)</title>
-        <pubTime>2016-06-28T13:15:12.000Z</pubTime>
-        
-        <tag>Spark</tag>
-         
-         
-           
-             
-              <breadCrumb title="Spark" url="http://spark8.tech/categories/Spark/"/>
-          
-        </display>
-    </data>
-    </url>
-
-    
-  <url>
-    <loc>http://spark8.tech/2016/06/27/lmsjfx/</loc>
-    <lastmod>2016-07-17T12:38:31.000Z</lastmod>
-    <data>
-        <display>
-        <title>SparkSQL—淘宝商品类目数据分析</title>
-        <pubTime>2016-06-27T13:15:12.000Z</pubTime>
-        
-        <tag>Spark</tag>
-         
-         
-           
-             
-              <breadCrumb title="Spark" url="http://spark8.tech/categories/Spark/"/>
-          
-        </display>
-    </data>
-    </url>
-
-    
-  <url>
-    <loc>http://spark8.tech/2016/06/28/webssls1/</loc>
-    <lastmod>2016-07-17T12:38:09.000Z</lastmod>
-    <data>
-        <display>
-        <title>SparkStreaming—Weblog流式实时统计(一)</title>
-        <pubTime>2016-06-28T13:15:12.000Z</pubTime>
-        
-        <tag>Spark</tag>
-         
-         
-           
-             
-              <breadCrumb title="Spark" url="http://spark8.tech/categories/Spark/"/>
-          
-        </display>
-    </data>
-    </url>
-
-    
-  <url>
-    <loc>http://spark8.tech/2016/06/24/yxyy1/</loc>
-    <lastmod>2016-07-17T12:11:18.000Z</lastmod>
-    <data>
-        <display>
-        <title>游戏运营分析(一) — 业务说明及技术架构</title>
-        <pubTime>2016-06-24T13:15:12.000Z</pubTime>
-        
-        <tag>Spark</tag>
-         
-         
-           
-             
-              <breadCrumb title="Spark" url="http://spark8.tech/categories/Spark/"/>
-          
-        </display>
-    </data>
-    </url>
-
-    
-  <url>
-    <loc>http://spark8.tech/2016/06/24/yxyy2/</loc>
-    <lastmod>2016-07-17T12:11:15.000Z</lastmod>
-    <data>
-        <display>
-        <title>游戏运营分析(二) — 数据采集阶段</title>
-        <pubTime>2016-06-24T13:15:12.000Z</pubTime>
-        
-        <tag>Spark</tag>
-         
-         
-           
-             
-              <breadCrumb title="Spark" url="http://spark8.tech/categories/Spark/"/>
-          
-        </display>
-    </data>
-    </url>
-
-    
-  <url>
-    <loc>http://spark8.tech/2016/06/25/yxyy3/</loc>
-    <lastmod>2016-07-17T12:11:12.000Z</lastmod>
-    <data>
-        <display>
-        <title>游戏运营分析(三) — 离线与实时业务线</title>
-        <pubTime>2016-06-25T13:15:12.000Z</pubTime>
-        
-        <tag>Spark</tag>
-         
-         
-           
-             
-              <breadCrumb title="Spark" url="http://spark8.tech/categories/Spark/"/>
-          
-        </display>
-    </data>
-    </url>
-
-    
-  <url>
-    <loc>http://spark8.tech/2016/06/25/yxyy4/</loc>
-    <lastmod>2016-07-17T12:11:08.000Z</lastmod>
-    <data>
-        <display>
-        <title>游戏运营分析(四) — web及数据展示</title>
-        <pubTime>2016-06-25T13:15:12.000Z</pubTime>
-        
-        <tag>Spark</tag>
-         
-         
-           
-             
-              <breadCrumb title="Spark" url="http://spark8.tech/categories/Spark/"/>
-          
-        </display>
-    </data>
-    </url>
-
-    
-  <url>
-    <loc>http://spark8.tech/2016/06/23/hivejilian/</loc>
-    <lastmod>2016-07-10T10:58:51.000Z</lastmod>
-    <data>
-        <display>
-        <title>Hive——级联求和accumulate</title>
-        <pubTime>2016-06-23T04:12:12.000Z</pubTime>
+        <title>Hadoop2.x——实现HA</title>
+        <pubTime>2015-06-22T15:12:12.000Z</pubTime>
         
         <tag>hadoop</tag>
          
-        <tag>hive</tag>
+        <tag>HA</tag>
          
          
            
@@ -226,12 +26,12 @@
 
     
   <url>
-    <loc>http://spark8.tech/2016/06/23/udf/</loc>
-    <lastmod>2016-07-10T10:58:39.000Z</lastmod>
+    <loc>http://spark8.tech/2015/07/17/udf/</loc>
+    <lastmod>2016-08-04T14:50:16.000Z</lastmod>
     <data>
         <display>
         <title>Hive ——内置函数与UDF实现</title>
-        <pubTime>2016-06-23T08:12:12.000Z</pubTime>
+        <pubTime>2015-07-17T08:12:12.000Z</pubTime>
         
         <tag>hadoop</tag>
          
@@ -248,12 +48,476 @@
 
     
   <url>
-    <loc>http://spark8.tech/2015/06/23/transform/</loc>
-    <lastmod>2016-07-10T10:58:26.000Z</lastmod>
+    <loc>http://spark8.tech/2015/07/20/hivejilian/</loc>
+    <lastmod>2016-08-04T14:49:58.000Z</lastmod>
+    <data>
+        <display>
+        <title>Hive——级联求和accumulate</title>
+        <pubTime>2015-07-20T04:12:12.000Z</pubTime>
+        
+        <tag>hadoop</tag>
+         
+        <tag>hive</tag>
+         
+         
+           
+             
+              <breadCrumb title="hadoop" url="http://spark8.tech/categories/hadoop/"/>
+          
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
+    <loc>http://spark8.tech/2016/04/25/sparkgb/</loc>
+    <lastmod>2016-08-04T14:46:26.000Z</lastmod>
+    <data>
+        <display>
+        <title>Spark1.6—RDD广播变量</title>
+        <pubTime>2016-04-25T13:15:12.000Z</pubTime>
+        
+        <tag>Spark</tag>
+         
+        <tag>RDD</tag>
+         
+         
+           
+             
+              <breadCrumb title="Spark" url="http://spark8.tech/categories/Spark/"/>
+          
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
+    <loc>http://spark8.tech/2016/04/19/sparkfqq/</loc>
+    <lastmod>2016-08-04T14:45:46.000Z</lastmod>
+    <data>
+        <display>
+        <title>Spark1.6—RDD自定义分区器Partitioner</title>
+        <pubTime>2016-04-19T13:15:12.000Z</pubTime>
+        
+        <tag>Spark</tag>
+         
+        <tag>RDD</tag>
+         
+         
+           
+             
+              <breadCrumb title="Spark" url="http://spark8.tech/categories/Spark/"/>
+          
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
+    <loc>http://spark8.tech/2016/04/23/sparksortby/</loc>
+    <lastmod>2016-08-04T14:45:13.000Z</lastmod>
+    <data>
+        <display>
+        <title>Spark1.6—自定义排序规则，对比Hadoop MR</title>
+        <pubTime>2016-04-23T13:15:12.000Z</pubTime>
+        
+        <tag>Spark</tag>
+         
+        <tag>RDD</tag>
+         
+         
+           
+             
+              <breadCrumb title="Spark" url="http://spark8.tech/categories/Spark/"/>
+          
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
+    <loc>http://spark8.tech/2016/04/20/rdddx/</loc>
+    <lastmod>2016-08-04T14:44:30.000Z</lastmod>
+    <data>
+        <display>
+        <title>Spark1.6— RDD 根据电信基站数据计算用户常在地点</title>
+        <pubTime>2016-04-20T13:15:12.000Z</pubTime>
+        
+        <tag>Spark</tag>
+         
+        <tag>RDD</tag>
+         
+         
+           
+             
+              <breadCrumb title="Spark" url="http://spark8.tech/categories/Spark/"/>
+          
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
+    <loc>http://spark8.tech/2016/02/18/scalayx/</loc>
+    <lastmod>2016-08-04T14:43:44.000Z</lastmod>
+    <data>
+        <display>
+        <title>Scala—-有序列表合并</title>
+        <pubTime>2016-02-18T05:15:12.000Z</pubTime>
+        
+        <tag>scala</tag>
+         
+         
+           
+             
+              <breadCrumb title="scala" url="http://spark8.tech/categories/scala/"/>
+          
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
+    <loc>http://spark8.tech/2016/02/18/scalayszh/</loc>
+    <lastmod>2016-08-04T14:43:39.000Z</lastmod>
+    <data>
+        <display>
+        <title>Scala—隐式转换实践</title>
+        <pubTime>2016-02-18T03:15:12.000Z</pubTime>
+        
+        <tag>scala</tag>
+         
+         
+           
+             
+              <breadCrumb title="scala" url="http://spark8.tech/categories/scala/"/>
+          
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
+    <loc>http://spark8.tech/2016/02/15/scalarpc/</loc>
+    <lastmod>2016-08-04T14:43:23.000Z</lastmod>
+    <data>
+        <display>
+        <title>Scala——利用Akka实现的RPC</title>
+        <pubTime>2016-02-15T13:15:12.000Z</pubTime>
+        
+        <tag>scala</tag>
+         
+         
+           
+             
+              <breadCrumb title="scala" url="http://spark8.tech/categories/scala/"/>
+          
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
+    <loc>http://spark8.tech/2016/02/13/scalacurry/</loc>
+    <lastmod>2016-08-04T14:43:15.000Z</lastmod>
+    <data>
+        <display>
+        <title>Scala——使用Currry实现视图界定</title>
+        <pubTime>2016-02-13T13:15:12.000Z</pubTime>
+        
+        <tag>scala</tag>
+         
+         
+           
+             
+              <breadCrumb title="scala" url="http://spark8.tech/categories/scala/"/>
+          
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
+    <loc>http://spark8.tech/2015/08/23/zkyuanli/</loc>
+    <lastmod>2016-08-04T14:40:23.000Z</lastmod>
+    <data>
+        <display>
+        <title>Zookeeper-原理补充</title>
+        <pubTime>2015-08-23T05:25:22.000Z</pubTime>
+        
+        <tag>zookeeper</tag>
+         
+         
+           
+             
+              <breadCrumb title="zookeeper" url="http://spark8.tech/categories/zookeeper/"/>
+          
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
+    <loc>http://spark8.tech/2015/08/19/zkfbss/</loc>
+    <lastmod>2016-08-04T14:40:00.000Z</lastmod>
+    <data>
+        <display>
+        <title>Zookeeper-分布式共享锁</title>
+        <pubTime>2015-08-19T08:25:22.000Z</pubTime>
+        
+        <tag>zookeeper</tag>
+         
+         
+           
+             
+              <breadCrumb title="zookeeper" url="http://spark8.tech/categories/zookeeper/"/>
+          
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
+    <loc>http://spark8.tech/2015/08/15/zkfbs/</loc>
+    <lastmod>2016-08-04T14:39:32.000Z</lastmod>
+    <data>
+        <display>
+        <title>Zookeeper-服务器上下线动态感知</title>
+        <pubTime>2015-08-15T08:25:22.000Z</pubTime>
+        
+        <tag>zookeeper</tag>
+         
+         
+           
+             
+              <breadCrumb title="zookeeper" url="http://spark8.tech/categories/zookeeper/"/>
+          
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
+    <loc>http://spark8.tech/2015/11/12/tjxt/</loc>
+    <lastmod>2016-08-04T14:38:25.000Z</lastmod>
+    <data>
+        <display>
+        <title>推荐系统——User CF vs. Item CF</title>
+        <pubTime>2015-11-12T08:25:22.000Z</pubTime>
+        
+        <tag>storm</tag>
+         
+        <tag>推荐系统</tag>
+         
+         
+           
+             
+              <breadCrumb title="storm" url="http://spark8.tech/categories/storm/"/>
+          
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
+    <loc>http://spark8.tech/2015/10/19/rizhijiankong2/</loc>
+    <lastmod>2016-08-04T14:37:14.000Z</lastmod>
+    <data>
+        <display>
+        <title>日志监控告警系统（二）</title>
+        <pubTime>2015-10-19T02:17:12.000Z</pubTime>
+        
+        <tag>flume</tag>
+         
+        <tag>storm</tag>
+         
+        <tag>kafka</tag>
+         
+         
+           
+             
+              <breadCrumb title="storm" url="http://spark8.tech/categories/storm/"/>
+          
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
+    <loc>http://spark8.tech/2015/10/17/rizhijiankong1/</loc>
+    <lastmod>2016-08-04T14:36:40.000Z</lastmod>
+    <data>
+        <display>
+        <title>日志监控告警系统（一）</title>
+        <pubTime>2015-10-17T05:14:22.000Z</pubTime>
+        
+        <tag>storm</tag>
+         
+        <tag>kafka</tag>
+         
+        <tag>mysql</tag>
+         
+         
+           
+             
+              <breadCrumb title="storm" url="http://spark8.tech/categories/storm/"/>
+          
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
+    <loc>http://spark8.tech/2015/04/17/redis_sortedSet/</loc>
+    <lastmod>2016-08-04T14:26:19.000Z</lastmod>
+    <data>
+        <display>
+        <title>Redis应用-LOL盒子英雄数据排行榜</title>
+        <pubTime>2015-04-17T05:25:22.000Z</pubTime>
+        
+        <tag>Redis</tag>
+         
+         
+           
+             
+              <breadCrumb title="redis" url="http://spark8.tech/categories/redis/"/>
+          
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
+    <loc>http://spark8.tech/2015/04/17/redisgouwuche/</loc>
+    <lastmod>2016-08-04T14:25:35.000Z</lastmod>
+    <data>
+        <display>
+        <title>Redis应用-购物车推荐</title>
+        <pubTime>2015-04-17T11:25:22.000Z</pubTime>
+        
+        <tag>redis</tag>
+         
+         
+           
+             
+              <breadCrumb title="redis" url="http://spark8.tech/categories/redis/"/>
+          
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
+    <loc>http://spark8.tech/2015/05/12/easyrpc2/</loc>
+    <lastmod>2016-08-04T14:24:26.000Z</lastmod>
+    <data>
+        <display>
+        <title>轻量级RPC框架（二）</title>
+        <pubTime>2015-05-12T06:25:22.000Z</pubTime>
+        
+        <tag>RPC</tag>
+         
+         
+           
+             
+              <breadCrumb title="RPC" url="http://spark8.tech/categories/RPC/"/>
+          
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
+    <loc>http://spark8.tech/2015/04/12/easyrpc/</loc>
+    <lastmod>2016-08-04T14:23:50.000Z</lastmod>
+    <data>
+        <display>
+        <title>轻量级RPC框架（一）</title>
+        <pubTime>2015-04-12T05:25:22.000Z</pubTime>
+        
+        <tag>RPC</tag>
+         
+         
+           
+             
+              <breadCrumb title="RPC" url="http://spark8.tech/categories/RPC/"/>
+          
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
+    <loc>http://spark8.tech/2015/05/16/Linuxline/</loc>
+    <lastmod>2016-08-04T14:22:48.000Z</lastmod>
+    <data>
+        <display>
+        <title>Linux——网络连接三种方式</title>
+        <pubTime>2015-05-16T03:15:22.000Z</pubTime>
+        
+        <tag>Linux</tag>
+         
+         
+           
+             
+              <breadCrumb title="Linux" url="http://spark8.tech/categories/Linux/"/>
+          
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
+    <loc>http://spark8.tech/2015/05/15/shellautodeploy/</loc>
+    <lastmod>2016-08-04T14:22:27.000Z</lastmod>
+    <data>
+        <display>
+        <title>Shell编程——自动化软件部署脚本</title>
+        <pubTime>2015-05-15T06:15:22.000Z</pubTime>
+        
+        <tag>Linux</tag>
+         
+        <tag>Shell脚本</tag>
+         
+         
+           
+             
+              <breadCrumb title="Linux" url="http://spark8.tech/categories/Linux/"/>
+          
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
+    <loc>http://spark8.tech/2015/05/17/shelltohdfs/</loc>
+    <lastmod>2016-08-04T14:21:49.000Z</lastmod>
+    <data>
+        <display>
+        <title>Shell编程——使用HDFS Shell上传文件</title>
+        <pubTime>2015-05-17T03:25:22.000Z</pubTime>
+        
+        <tag>Linux</tag>
+         
+        <tag>Shell脚本</tag>
+         
+         
+           
+             
+              <breadCrumb title="Linux" url="http://spark8.tech/categories/Linux/"/>
+          
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
+    <loc>http://spark8.tech/2015/07/15/transform/</loc>
+    <lastmod>2016-08-04T14:17:31.000Z</lastmod>
     <data>
         <display>
         <title>Hive——transform</title>
-        <pubTime>2015-06-23T08:12:12.000Z</pubTime>
+        <pubTime>2015-07-15T08:12:12.000Z</pubTime>
         
         <tag>hadoop</tag>
          
@@ -270,12 +534,12 @@
 
     
   <url>
-    <loc>http://spark8.tech/2015/06/23/flumerizhi/</loc>
-    <lastmod>2016-07-10T10:58:17.000Z</lastmod>
+    <loc>http://spark8.tech/2015/06/23/flumetuomin/</loc>
+    <lastmod>2016-08-04T14:16:46.000Z</lastmod>
     <data>
         <display>
-        <title>Flume——日志采集与汇总</title>
-        <pubTime>2015-06-23T13:12:12.000Z</pubTime>
+        <title>Flume——自定义拦截器(脱敏处理)</title>
+        <pubTime>2015-06-23T10:15:12.000Z</pubTime>
         
         <tag>hadoop</tag>
          
@@ -292,16 +556,184 @@
 
     
   <url>
-    <loc>http://spark8.tech/2016/06/23/flumetuomin/</loc>
-    <lastmod>2016-07-10T10:58:08.000Z</lastmod>
+    <loc>http://spark8.tech/2015/06/24/flumerizhi/</loc>
+    <lastmod>2016-08-04T14:11:06.000Z</lastmod>
     <data>
         <display>
-        <title>Flume——自定义拦截器(脱敏处理)</title>
-        <pubTime>2016-06-23T13:15:12.000Z</pubTime>
+        <title>Flume——日志采集与汇总</title>
+        <pubTime>2015-06-24T07:12:12.000Z</pubTime>
         
         <tag>hadoop</tag>
          
         <tag>flume</tag>
+         
+         
+           
+             
+              <breadCrumb title="hadoop" url="http://spark8.tech/categories/hadoop/"/>
+          
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
+    <loc>http://spark8.tech/2015/06/27/mrziyuanyouhua/</loc>
+    <lastmod>2016-08-04T14:09:37.000Z</lastmod>
+    <data>
+        <display>
+        <title>Hadoop2.x——MR参数优化</title>
+        <pubTime>2015-06-27T06:12:12.000Z</pubTime>
+        
+        <tag>hadoop</tag>
+         
+        <tag>map reduce</tag>
+         
+         
+           
+             
+              <breadCrumb title="hadoop" url="http://spark8.tech/categories/hadoop/"/>
+          
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
+    <loc>http://spark8.tech/2015/05/20/groupingCompa/</loc>
+    <lastmod>2016-08-04T14:08:35.000Z</lastmod>
+    <data>
+        <display>
+        <title>Hadoop2.x——自定义GroupingComparator分组取Top1</title>
+        <pubTime>2015-05-20T02:12:12.000Z</pubTime>
+        
+        <tag>hadoop</tag>
+         
+         
+           
+             
+              <breadCrumb title="hadoop" url="http://spark8.tech/categories/hadoop/"/>
+          
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
+    <loc>http://spark8.tech/2015/05/17/gongtonghaoyou/</loc>
+    <lastmod>2016-08-04T14:07:45.000Z</lastmod>
+    <data>
+        <display>
+        <title>Hadoop2.x——共同好友问题</title>
+        <pubTime>2015-05-17T01:12:12.000Z</pubTime>
+        
+        <tag>hadoop</tag>
+         
+        <tag>MR</tag>
+         
+         
+           
+             
+              <breadCrumb title="hadoop" url="http://spark8.tech/categories/hadoop/"/>
+          
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
+    <loc>http://spark8.tech/2015/05/16/zidingyiot/</loc>
+    <lastmod>2016-08-04T14:07:40.000Z</lastmod>
+    <data>
+        <display>
+        <title>Hadoop2.x——自定义输出格式重写outputformat</title>
+        <pubTime>2015-05-16T11:12:12.000Z</pubTime>
+        
+        <tag>hadoop</tag>
+         
+        <tag>outputformat</tag>
+         
+         
+           
+             
+              <breadCrumb title="hadoop" url="http://spark8.tech/categories/hadoop/"/>
+          
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
+    <loc>http://spark8.tech/2015/05/14/hadoopzlj/</loc>
+    <lastmod>2016-08-04T14:07:32.000Z</lastmod>
+    <data>
+        <display>
+        <title>Hadoop2.x——左连接</title>
+        <pubTime>2015-05-14T15:12:12.000Z</pubTime>
+        
+        <tag>hadoop</tag>
+         
+         
+           
+             
+              <breadCrumb title="hadoop" url="http://spark8.tech/categories/hadoop/"/>
+          
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
+    <loc>http://spark8.tech/2015/05/18/fbshchadoop/</loc>
+    <lastmod>2016-08-04T14:07:13.000Z</lastmod>
+    <data>
+        <display>
+        <title>Hadoop2.x——分布式缓存(解决数据倾斜问题)</title>
+        <pubTime>2015-05-18T05:12:12.000Z</pubTime>
+        
+        <tag>hadoop</tag>
+         
+         
+           
+             
+              <breadCrumb title="hadoop" url="http://spark8.tech/categories/hadoop/"/>
+          
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
+    <loc>http://spark8.tech/2015/05/15/daopaisuoyin/</loc>
+    <lastmod>2016-08-04T14:05:13.000Z</lastmod>
+    <data>
+        <display>
+        <title>Hadoop2.x——倒排索引</title>
+        <pubTime>2015-05-15T15:12:12.000Z</pubTime>
+        
+        <tag>hadoop</tag>
+         
+         
+           
+             
+              <breadCrumb title="hadoop" url="http://spark8.tech/categories/hadoop/"/>
+          
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
+    <loc>http://spark8.tech/2015/05/12/mapreduce/</loc>
+    <lastmod>2016-08-04T14:03:21.000Z</lastmod>
+    <data>
+        <display>
+        <title>Hadoop2.x——MR并行计算框架结构及核心运行机制</title>
+        <pubTime>2015-05-12T01:15:12.000Z</pubTime>
+        
+        <tag>hadoop</tag>
+         
+        <tag>MapReduce</tag>
          
          
            
@@ -335,638 +767,6 @@
     </url>
 
     
-  <url>
-    <loc>http://spark8.tech/2016/06/23/zkyuanli/</loc>
-    <lastmod>2016-07-10T10:57:44.000Z</lastmod>
-    <data>
-        <display>
-        <title>Zookeeper-原理补充</title>
-        <pubTime>2016-06-23T05:25:22.000Z</pubTime>
-        
-        <tag>zookeeper</tag>
-         
-         
-           
-             
-              <breadCrumb title="zookeeper" url="http://spark8.tech/categories/zookeeper/"/>
-          
-        </display>
-    </data>
-    </url>
-
-    
-  <url>
-    <loc>http://spark8.tech/2016/06/23/zkfbss/</loc>
-    <lastmod>2016-07-10T10:57:38.000Z</lastmod>
-    <data>
-        <display>
-        <title>Zookeeper-分布式共享锁</title>
-        <pubTime>2016-06-23T08:25:22.000Z</pubTime>
-        
-        <tag>zookeeper</tag>
-         
-         
-           
-             
-              <breadCrumb title="zookeeper" url="http://spark8.tech/categories/zookeeper/"/>
-          
-        </display>
-    </data>
-    </url>
-
-    
-  <url>
-    <loc>http://spark8.tech/2016/06/23/zkfbs/</loc>
-    <lastmod>2016-07-10T10:57:29.000Z</lastmod>
-    <data>
-        <display>
-        <title>Zookeeper-服务器上下线动态感知</title>
-        <pubTime>2016-06-23T08:25:22.000Z</pubTime>
-        
-        <tag>zookeeper</tag>
-         
-         
-           
-             
-              <breadCrumb title="zookeeper" url="http://spark8.tech/categories/zookeeper/"/>
-          
-        </display>
-    </data>
-    </url>
-
-    
-  <url>
-    <loc>http://spark8.tech/2016/06/22/mapreduce/</loc>
-    <lastmod>2016-07-06T13:25:38.000Z</lastmod>
-    <data>
-        <display>
-        <title>Hadoop2.x——MR并行计算框架结构及核心运行机制</title>
-        <pubTime>2016-06-22T14:15:12.000Z</pubTime>
-        
-        <tag>hadoop</tag>
-         
-        <tag>MapReduce</tag>
-         
-         
-           
-             
-              <breadCrumb title="hadoop" url="http://spark8.tech/categories/hadoop/"/>
-          
-        </display>
-    </data>
-    </url>
-
-    
-  <url>
-    <loc>http://spark8.tech/2016/06/22/mrziyuanyouhua/</loc>
-    <lastmod>2016-07-06T13:24:42.000Z</lastmod>
-    <data>
-        <display>
-        <title>Hadoop2.x——MR参数优化</title>
-        <pubTime>2016-06-22T04:12:12.000Z</pubTime>
-        
-        <tag>hadoop</tag>
-         
-        <tag>map reduce</tag>
-         
-         
-           
-             
-              <breadCrumb title="hadoop" url="http://spark8.tech/categories/hadoop/"/>
-          
-        </display>
-    </data>
-    </url>
-
-    
-  <url>
-    <loc>http://spark8.tech/2016/06/22/groupingCompa/</loc>
-    <lastmod>2016-07-06T13:21:11.000Z</lastmod>
-    <data>
-        <display>
-        <title>Hadoop2.x——自定义GroupingComparator分组取Top1</title>
-        <pubTime>2016-06-22T04:12:12.000Z</pubTime>
-        
-        <tag>hadoop</tag>
-         
-         
-           
-             
-              <breadCrumb title="hadoop" url="http://spark8.tech/categories/hadoop/"/>
-          
-        </display>
-    </data>
-    </url>
-
-    
-  <url>
-    <loc>http://spark8.tech/2016/06/22/gongtonghaoyou/</loc>
-    <lastmod>2016-07-06T13:20:44.000Z</lastmod>
-    <data>
-        <display>
-        <title>Hadoop2.x——共同好友问题</title>
-        <pubTime>2016-06-22T15:12:12.000Z</pubTime>
-        
-        <tag>hadoop</tag>
-         
-        <tag>MR</tag>
-         
-         
-           
-             
-              <breadCrumb title="hadoop" url="http://spark8.tech/categories/hadoop/"/>
-          
-        </display>
-    </data>
-    </url>
-
-    
-  <url>
-    <loc>http://spark8.tech/2016/06/22/daopaisuoyin/</loc>
-    <lastmod>2016-07-06T13:20:20.000Z</lastmod>
-    <data>
-        <display>
-        <title>Hadoop2.x——倒排索引</title>
-        <pubTime>2016-06-22T15:12:12.000Z</pubTime>
-        
-        <tag>hadoop</tag>
-         
-         
-           
-             
-              <breadCrumb title="hadoop" url="http://spark8.tech/categories/hadoop/"/>
-          
-        </display>
-    </data>
-    </url>
-
-    
-  <url>
-    <loc>http://spark8.tech/2016/06/22/zidingyiot/</loc>
-    <lastmod>2016-07-06T13:19:42.000Z</lastmod>
-    <data>
-        <display>
-        <title>Hadoop2.x——自定义输出格式重写outputformat</title>
-        <pubTime>2016-06-22T15:12:12.000Z</pubTime>
-        
-        <tag>hadoop</tag>
-         
-        <tag>outputformat</tag>
-         
-         
-           
-             
-              <breadCrumb title="hadoop" url="http://spark8.tech/categories/hadoop/"/>
-          
-        </display>
-    </data>
-    </url>
-
-    
-  <url>
-    <loc>http://spark8.tech/2016/06/22/fbshchadoop/</loc>
-    <lastmod>2016-07-06T13:19:01.000Z</lastmod>
-    <data>
-        <display>
-        <title>Hadoop2.x——分布式缓存(解决数据倾斜问题)</title>
-        <pubTime>2016-06-22T05:12:12.000Z</pubTime>
-        
-        <tag>hadoop</tag>
-         
-         
-           
-             
-              <breadCrumb title="hadoop" url="http://spark8.tech/categories/hadoop/"/>
-          
-        </display>
-    </data>
-    </url>
-
-    
-  <url>
-    <loc>http://spark8.tech/2016/06/22/hadoopzlj/</loc>
-    <lastmod>2016-07-06T13:18:33.000Z</lastmod>
-    <data>
-        <display>
-        <title>Hadoop2.x——左连接</title>
-        <pubTime>2016-06-22T15:12:12.000Z</pubTime>
-        
-        <tag>hadoop</tag>
-         
-         
-           
-             
-              <breadCrumb title="hadoop" url="http://spark8.tech/categories/hadoop/"/>
-          
-        </display>
-    </data>
-    </url>
-
-    
-  <url>
-    <loc>http://spark8.tech/2016/06/22/hadoopha/</loc>
-    <lastmod>2016-07-06T13:18:09.000Z</lastmod>
-    <data>
-        <display>
-        <title>Hadoop2.x——实现HA</title>
-        <pubTime>2016-06-22T15:12:12.000Z</pubTime>
-        
-        <tag>hadoop</tag>
-         
-        <tag>HA</tag>
-         
-         
-           
-             
-              <breadCrumb title="hadoop" url="http://spark8.tech/categories/hadoop/"/>
-          
-        </display>
-    </data>
-    </url>
-
-    
-  <url>
-    <loc>http://spark8.tech/2016/06/21/sparksortby/</loc>
-    <lastmod>2016-07-06T13:12:58.000Z</lastmod>
-    <data>
-        <display>
-        <title>Spark1.6—自定义排序规则，对比Hadoop MR</title>
-        <pubTime>2016-06-21T13:15:12.000Z</pubTime>
-        
-        <tag>Spark</tag>
-         
-        <tag>RDD</tag>
-         
-         
-           
-             
-              <breadCrumb title="Spark" url="http://spark8.tech/categories/Spark/"/>
-          
-        </display>
-    </data>
-    </url>
-
-    
-  <url>
-    <loc>http://spark8.tech/2016/06/21/sparkgb/</loc>
-    <lastmod>2016-07-06T13:07:08.000Z</lastmod>
-    <data>
-        <display>
-        <title>Spark1.6—RDD广播变量</title>
-        <pubTime>2016-06-21T13:15:12.000Z</pubTime>
-        
-        <tag>Spark</tag>
-         
-        <tag>RDD</tag>
-         
-         
-           
-             
-              <breadCrumb title="Spark" url="http://spark8.tech/categories/Spark/"/>
-          
-        </display>
-    </data>
-    </url>
-
-    
-  <url>
-    <loc>http://spark8.tech/2016/06/21/sparkfqq/</loc>
-    <lastmod>2016-07-06T13:02:22.000Z</lastmod>
-    <data>
-        <display>
-        <title>Spark1.6—RDD自定义分区器Partitioner</title>
-        <pubTime>2016-06-21T13:15:12.000Z</pubTime>
-        
-        <tag>Spark</tag>
-         
-        <tag>RDD</tag>
-         
-         
-           
-             
-              <breadCrumb title="Spark" url="http://spark8.tech/categories/Spark/"/>
-          
-        </display>
-    </data>
-    </url>
-
-    
-  <url>
-    <loc>http://spark8.tech/2016/06/20/rdddx/</loc>
-    <lastmod>2016-07-04T05:14:07.000Z</lastmod>
-    <data>
-        <display>
-        <title>Spark1.6— RDD 根据电信基站数据计算用户常在地点</title>
-        <pubTime>2016-06-20T13:15:12.000Z</pubTime>
-        
-        <tag>Spark</tag>
-         
-        <tag>RDD</tag>
-         
-         
-           
-             
-              <breadCrumb title="Spark" url="http://spark8.tech/categories/Spark/"/>
-          
-        </display>
-    </data>
-    </url>
-
-    
-  <url>
-    <loc>http://spark8.tech/2016/05/12/easyrpc2/</loc>
-    <lastmod>2016-07-03T12:22:41.000Z</lastmod>
-    <data>
-        <display>
-        <title>轻量级RPC框架（二）</title>
-        <pubTime>2016-05-12T05:25:22.000Z</pubTime>
-        
-        <tag>RPC</tag>
-         
-         
-           
-             
-              <breadCrumb title="RPC" url="http://spark8.tech/categories/RPC/"/>
-          
-        </display>
-    </data>
-    </url>
-
-    
-  <url>
-    <loc>http://spark8.tech/2016/05/15/shellautodeploy/</loc>
-    <lastmod>2016-07-03T12:17:18.000Z</lastmod>
-    <data>
-        <display>
-        <title>Shell编程——自动化软件部署脚本</title>
-        <pubTime>2016-05-15T06:15:22.000Z</pubTime>
-        
-        <tag>Linux</tag>
-         
-        <tag>Shell脚本</tag>
-         
-         
-           
-             
-              <breadCrumb title="Linux" url="http://spark8.tech/categories/Linux/"/>
-          
-        </display>
-    </data>
-    </url>
-
-    
-  <url>
-    <loc>http://spark8.tech/2016/05/17/shelltohdfs/</loc>
-    <lastmod>2016-07-03T12:15:53.000Z</lastmod>
-    <data>
-        <display>
-        <title>Shell编程——使用HDFS Shell上传文件</title>
-        <pubTime>2016-05-17T03:25:22.000Z</pubTime>
-        
-        <tag>Linux</tag>
-         
-        <tag>Shell脚本</tag>
-         
-         
-           
-             
-              <breadCrumb title="Linux" url="http://spark8.tech/categories/Linux/"/>
-          
-        </display>
-    </data>
-    </url>
-
-    
-  <url>
-    <loc>http://spark8.tech/2016/05/17/rizhijiankong1/</loc>
-    <lastmod>2016-07-03T12:14:08.000Z</lastmod>
-    <data>
-        <display>
-        <title>日志监控告警系统（一）</title>
-        <pubTime>2016-05-17T15:25:22.000Z</pubTime>
-        
-        <tag>storm</tag>
-         
-        <tag>kafka</tag>
-         
-        <tag>mysql</tag>
-         
-         
-           
-             
-              <breadCrumb title="storm" url="http://spark8.tech/categories/storm/"/>
-          
-        </display>
-    </data>
-    </url>
-
-    
-  <url>
-    <loc>http://spark8.tech/2016/06/18/scalacurry/</loc>
-    <lastmod>2016-07-03T11:28:49.000Z</lastmod>
-    <data>
-        <display>
-        <title>Scala——使用Currry实现视图界定</title>
-        <pubTime>2016-06-18T13:15:12.000Z</pubTime>
-        
-        <tag>scala</tag>
-         
-         
-           
-             
-              <breadCrumb title="scala" url="http://spark8.tech/categories/scala/"/>
-          
-        </display>
-    </data>
-    </url>
-
-    
-  <url>
-    <loc>http://spark8.tech/2016/06/18/scalayx/</loc>
-    <lastmod>2016-07-03T11:25:06.000Z</lastmod>
-    <data>
-        <display>
-        <title>Scala—-有序列表合并</title>
-        <pubTime>2016-06-18T13:15:12.000Z</pubTime>
-        
-        <tag>scala</tag>
-         
-         
-           
-             
-              <breadCrumb title="scala" url="http://spark8.tech/categories/scala/"/>
-          
-        </display>
-    </data>
-    </url>
-
-    
-  <url>
-    <loc>http://spark8.tech/2016/06/18/scalarpc/</loc>
-    <lastmod>2016-07-03T11:21:17.000Z</lastmod>
-    <data>
-        <display>
-        <title>Scala——利用Akka实现的RPC</title>
-        <pubTime>2016-06-18T13:15:12.000Z</pubTime>
-        
-        <tag>scala</tag>
-         
-         
-           
-             
-              <breadCrumb title="scala" url="http://spark8.tech/categories/scala/"/>
-          
-        </display>
-    </data>
-    </url>
-
-    
-  <url>
-    <loc>http://spark8.tech/2016/06/18/scalayszh/</loc>
-    <lastmod>2016-07-03T11:17:03.000Z</lastmod>
-    <data>
-        <display>
-        <title>Scala—隐式转换实践</title>
-        <pubTime>2016-06-18T13:15:12.000Z</pubTime>
-        
-        <tag>scala</tag>
-         
-         
-           
-             
-              <breadCrumb title="scala" url="http://spark8.tech/categories/scala/"/>
-          
-        </display>
-    </data>
-    </url>
-
-    
-  <url>
-    <loc>http://spark8.tech/2016/04/12/tjxt/</loc>
-    <lastmod>2016-06-24T05:12:10.000Z</lastmod>
-    <data>
-        <display>
-        <title>推荐系统——User CF vs. Item CF</title>
-        <pubTime>2016-04-12T08:25:22.000Z</pubTime>
-        
-        <tag>storm</tag>
-         
-        <tag>推荐系统</tag>
-         
-         
-           
-             
-              <breadCrumb title="storm" url="http://spark8.tech/categories/storm/"/>
-          
-        </display>
-    </data>
-    </url>
-
-    
-  <url>
-    <loc>http://spark8.tech/2016/03/12/redisgouwuche/</loc>
-    <lastmod>2016-06-23T11:28:19.000Z</lastmod>
-    <data>
-        <display>
-        <title>Redis应用-购物车推荐</title>
-        <pubTime>2016-03-12T05:25:22.000Z</pubTime>
-        
-        <tag>redis</tag>
-         
-         
-           
-             
-              <breadCrumb title="redis" url="http://spark8.tech/categories/redis/"/>
-          
-        </display>
-    </data>
-    </url>
-
-    
-  <url>
-    <loc>http://spark8.tech/2016/05/18/rizhijiankong2/</loc>
-    <lastmod>2016-06-23T01:00:07.000Z</lastmod>
-    <data>
-        <display>
-        <title>日志监控告警系统（二）</title>
-        <pubTime>2016-05-18T02:25:22.000Z</pubTime>
-        
-        <tag>flume</tag>
-         
-        <tag>storm</tag>
-         
-        <tag>kafka</tag>
-         
-         
-           
-             
-              <breadCrumb title="storm" url="http://spark8.tech/categories/storm/"/>
-          
-        </display>
-    </data>
-    </url>
-
-    
-    
-  <url>
-    <loc>http://spark8.tech/2016/03/14/redis_sortedSet/</loc>
-    <lastmod>2016-06-20T06:28:33.000Z</lastmod>
-    <data>
-        <display>
-        <title>Redis应用-LOL盒子英雄数据排行榜</title>
-        <pubTime>2016-03-14T05:25:22.000Z</pubTime>
-        
-        <tag>Redis</tag>
-         
-         
-           
-             
-              <breadCrumb title="redis" url="http://spark8.tech/categories/redis/"/>
-          
-        </display>
-    </data>
-    </url>
-
-    
-  <url>
-    <loc>http://spark8.tech/2016/05/12/easyrpc/</loc>
-    <lastmod>2016-06-20T05:13:31.000Z</lastmod>
-    <data>
-        <display>
-        <title>轻量级RPC框架（一）</title>
-        <pubTime>2016-05-12T03:25:22.000Z</pubTime>
-        
-        <tag>RPC</tag>
-         
-         
-           
-             
-              <breadCrumb title="RPC" url="http://spark8.tech/categories/RPC/"/>
-          
-        </display>
-    </data>
-    </url>
-
-    
-  <url>
-    <loc>http://spark8.tech/2016/05/16/Linuxline/</loc>
-    <lastmod>2016-06-18T15:06:17.000Z</lastmod>
-    <data>
-        <display>
-        <title>Linux——网络连接三种方式</title>
-        <pubTime>2016-05-16T03:15:22.000Z</pubTime>
-        
-        <tag>Linux</tag>
-         
-         
-           
-             
-              <breadCrumb title="Linux" url="http://spark8.tech/categories/Linux/"/>
-          
-        </display>
-    </data>
-    </url>
-
     
     
 </urlset>

@@ -1,0 +1,212 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta http-equiv="content-type" content="text/html; charset=utf-8"><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport"><meta content="yes" name="apple-mobile-web-app-capable"><meta content="black-translucent" name="apple-mobile-web-app-status-bar-style"><meta content="HMmFpsFIIdXroD_bySStaKsE_InwsQEEVxA2Cne-P4o" name="google-site-verification"><meta content="telephone=no" name="format-detection"><meta name="description" content="spark8,Spark2.0"><title>Scala——利用Akka实现的RPC | Spark8</title><link rel="stylesheet" type="text/css" href="/css/style.css?v=0.0.1"><link rel="stylesheet" type="text/css" href="//cdn.bootcss.com/normalize/4.1.1/normalize.min.css"><link rel="stylesheet" type="text/css" href="//cdn.bootcss.com/pure/0.6.0/pure-min.css"><link rel="stylesheet" type="text/css" href="//cdn.bootcss.com/pure/0.6.0/grids-responsive-min.css"><link rel="stylesheet" href="//cdn.bootcss.com/font-awesome/4.6.2/css/font-awesome.min.css"><script type="text/javascript" src="//cdn.bootcss.com/jquery/2.2.3/jquery.min.js"></script><link rel="Shortcut Icon" type="image/x-icon" href="/favicon.ico"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="apple-touch-icon-precomposed" href="/apple-touch-icon.png"></head><body><div class="body_container"><div id="header"><div class="site-name"><h1 class="hidden">Scala——利用Akka实现的RPC</h1><a id="logo" href="/.">Spark8</a><p class="description">给理想一点时间</p></div><div id="nav-menu"><a href="/." class="current"><i class="fa fa-home"> 首页</i></a><a href="/archives/"><i class="fa fa-archive"> 归档</i></a><a href="/about/"><i class="fa fa-user"> 关于</i></a></div></div><div id="layout" class="pure-g"><div class="pure-u-1 pure-u-md-3-4"><div class="content_container"><div class="post"><h1 class="post-title">Scala——利用Akka实现的RPC</h1><div class="post-meta">Feb 15, 2016<span> | </span><span class="category"><a href="/categories/scala/">scala</a></span><script src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js" async></script><span id="busuanzi_container_page_pv"> | <span id="busuanzi_value_page_pv"></span><span> Hits</span></span></div><a data-disqus-identifier="2016/02/15/scalarpc/" href="/2016/02/15/scalarpc/#disqus_thread" class="disqus-comment-count"></a><div class="post-content"><a id="more"></a>
+<h1 id="需求描述"><a href="#需求描述" class="headerlink" title="需求描述"></a>需求描述</h1><p>使用Scala+Akka实现一个RPC</p>
+<h1 id="设计思路"><a href="#设计思路" class="headerlink" title="设计思路"></a>设计思路</h1><p>先创建一个ActorSystem,单例<br>1.为MasterSystem指定名称,并新建一个名称为Master的Actor<br>2.建一个WorkerSystem,并未WorkerSystem创建一个Actor名字叫Worker<br>3.Worker通过Actor上下文连接Master Actor<br>4.通过返回的ActorSelection 向Master发送注册信息,包括workerid,host,port<br>  消息是一个case class RegisterWorker,走网络,要实现序列化<br>5.接收来自Worker的注册信息,先判断是否存在网络延迟引起的重复注册<br>6.将worker缓存到一个HashMap中,存所有worker的信息<br>  HashSet的workers 是为了第13步方便查找worker的信息<br>7.通知Worker注册成功,并将注册的主机url发送给Woker<br>  由RegisteredWorker传递消息<br>8.Worker接收到Master注册成功的反馈信息<br>  保存主机url以备掉线后重新连接<br>9.发送定时心跳 ，心跳是一个case class,但是schedule方法需要一个ActorRef<br>  而master是ActorSelector不能发送,有一个取巧的办法,发送给自己一个 case object指令(单例,无数据)<br>  其中要导入一个隐式转换，才能启动定时器<br>10.发送心跳之前要进行一些业务逻辑和检查,确认worker工作正常然后再发送心跳<br>11.Master接收到心跳,从Map里面取出worker的id,更新最近一次心跳时间<br>12.Master启动时就开始检查在preStart启动一个定时器，用于周期检查超时的Worker，(技巧)发消息给自己，也用了一个取巧的方法<br>13.从worker中过滤出间隔时间超过检查周期的workerInfo,再将超时的worker从内存中移除掉</p>
+<h2 id="代码实现"><a href="#代码实现" class="headerlink" title="代码实现"></a>代码实现</h2><h3 id="Master"><a href="#Master" class="headerlink" title="Master"></a>Master</h3><pre><code>//在Akka中负责监控和创建Actor的老大叫ActorSystem
+//负责正在通信的叫Actor
+class Master(val masterHost: String, val masterPort: Int) extends Actor {
+
+  val idToWorker = new mutable.HashMap[String, WorkerInfo]()
+  val workers = new mutable.HashSet[WorkerInfo]()
+  val CHECK_INTERVAL = 15000
+
+  //preStart会被调用一次，在构造方法之后，receive方法之前
+  override def preStart(): Unit = {
+    //12.Master启动时就开始检查在preStart启动一个定时器，用于周期检查超时的Worker
+    //   发消息给自己,也用了一个取巧的方法
+    import context.dispatcher
+    context.system.scheduler.schedule(0 millis, CHECK_INTERVAL millis, self, CheckTimeOutWorker)
+  }
+
+  override def receive: Receive = {
+    //Worker -&gt; Master
+    case RegisterWorker(id, host, port, memory, cores) =&gt; {
+      //5.接收来自Worker的注册信息,先判断是否存在网络延迟引起的重复注册
+      if (!idToWorker.contains(id)) {
+        val workerInfo = new WorkerInfo(id, host, port, memory, cores)
+        //6.将worker缓存到一个HashMap中,存所有worker的信息
+        //  HashSet的workers 是为了第13步方便查找worker的信息
+        idToWorker += (id -&gt; workerInfo)
+        workers += workerInfo
+        println(&quot;a worker registered&quot;)
+        //7.通知Worker注册成功,并将注册的主机url发送给Woker
+        //  由RegisteredWorker传递消息
+        sender ! RegisteredWorker(s&quot;akka.tcp://${Master.MASTER_SYSTEM}@$masterHost:$masterPort/user/${Master.MASTER_ACTOR}&quot;)
+      }
+    }
+
+    case Heartbeat(workerId) =&gt; {
+      //11.Master接收到心跳,从Map里面取出worker的id,更新最近一次心跳时间
+      val workerInfo = idToWorker(workerId)
+      val current_time = System.currentTimeMillis()
+      //更新最后一次心跳时间
+      workerInfo.lastHeartbearTime = current_time
+    }
+
+    case CheckTimeOutWorker =&gt; {
+      //13.从worker中过滤出间隔时间超过检查周期的workerInfo,再将超时的worker从内存中移除掉
+      val currentTime = System.currentTimeMillis()
+      val toRemove: mutable.HashSet[WorkerInfo] = workers.filter(w =&gt; currentTime - w.lastHeartbearTime &gt; CHECK_INTERVAL)
+      toRemove.foreach(deadWorker =&gt; {
+        //将超时的worker从内存中移除掉
+        idToWorker -= deadWorker.id
+        workers -= deadWorker
+      })
+      println(&quot;num of workers &quot; +  workers.size)
+    }
+
+  }
+}
+
+object Master {
+
+  val MASTER_SYSTEM = &quot;MasterSystem&quot;
+  val MASTER_ACTOR = &quot;Master&quot;
+
+  def main(args: Array[String]) {
+    //如果想创建Actor，必须先创建他的老大，ActorSystem（单例的）
+
+    val host = args(0)
+    val port = args(1).toInt
+    val configStr =
+      s&quot;&quot;&quot;
+         |akka.actor.provider = &quot;akka.remote.RemoteActorRefProvider&quot;
+         |akka.remote.netty.tcp.hostname = &quot;$host&quot;
+         |akka.remote.netty.tcp.port = &quot;$port&quot;
+         &quot;&quot;&quot;.stripMargin
+    val config = ConfigFactory.parseString(configStr)
+    //先创建一个ActorSystem,单例
+    //1.为MasterSystem指定名称,并新建一个名称为Master的Actor
+    val actorSystem = ActorSystem(MASTER_SYSTEM, config)
+    actorSystem.actorOf(Props(new Master(host, port)), MASTER_ACTOR)
+    actorSystem.awaitTermination()
+
+  }
+}
+</code></pre><h3 id="Worker"><a href="#Worker" class="headerlink" title="Worker"></a>Worker</h3><pre><code>class Worker(val host: String, val port: Int, val masterHost: String, val masterPort: Int, val memory: Int, val cores: Int) extends Actor{
+
+  val worker_id = UUID.randomUUID().toString
+  var masterUrl: String = _
+  val HEARTBEAT_INTERVAL = 10000
+  var master : ActorSelection = _
+
+
+  override def preStart(): Unit = {
+    //3.Worker通过Actor上下文连接Master Actor
+    master = context.actorSelection(s&quot;akka.tcp://${Master.MASTER_SYSTEM}@$masterHost:$masterPort/user/${Master.MASTER_ACTOR}&quot;)
+    //4.通过返回的ActorSelection 向Master发送注册信息,包括workerid,host,port
+    //  消息是一个case class RegisterWorker,走网络,要实现序列化
+    master ! RegisterWorker(worker_id, host, port, memory, cores)
+  }
+
+  override def receive: Receive = {
+    //8.Worker接收到Master注册成功的反馈信息
+    case RegisteredWorker(masterUrl) =&gt; {
+      //保存主机url以备重新连接
+      this.masterUrl = masterUrl
+      //9.发送定时心跳 ，心跳是一个case class,但是schedule方法需要一个ActorRef
+      //  而master是ActorSelector不能发送,有一个取巧的办法,发送给自己一个 case object指令(单例,无数据)
+      //  导入一个隐式转换，才能启动定时器
+      import context.dispatcher
+      context.system.scheduler.schedule(0 millis, HEARTBEAT_INTERVAL millis, self, SendHeartbeat)
+    }
+
+    case SendHeartbeat =&gt; {
+      //10.发送心跳之前要进行一些业务逻辑和检查,确认worker工作正常
+      //   然后再发送心跳
+      master ! Heartbeat(worker_id)
+    }
+  }
+}
+
+object Worker {
+
+  val WORKER_SYSTEM = &quot;WorkerSystem&quot;
+  val WORKER_ACTOR = &quot;Worker&quot;
+
+  def main(args: Array[String]) {
+
+    val host = args(0)
+    val port = args(1).toInt
+    val masterHost = args(2)
+    val masterPort = args(3).toInt
+    val memory = args(4).toInt
+    val cores = args(5).toInt
+
+    val configStr =
+      s&quot;&quot;&quot;
+         |akka.actor.provider = &quot;akka.remote.RemoteActorRefProvider&quot;
+         |akka.remote.netty.tcp.hostname = &quot;$host&quot;
+         |akka.remote.netty.tcp.port = &quot;$port&quot;
+         &quot;&quot;&quot;.stripMargin
+    val config = ConfigFactory.parseString(configStr)
+    val actorSystem = ActorSystem(WORKER_SYSTEM, config)
+    //2.建一个WorkerSystem,并未WorkerSystem创建一个Actor名字叫Worker
+    actorSystem.actorOf(Props(new Worker(host, port, masterHost, masterPort, memory, cores)), WORKER_ACTOR)
+    actorSystem.awaitTermination()
+
+  }
+}
+</code></pre><h3 id="WorkerInfo"><a href="#WorkerInfo" class="headerlink" title="WorkerInfo"></a>WorkerInfo</h3><pre><code>/**
+  * 用于封装Worker的信息
+  * @param id
+  * @param host
+  * @param port
+  * @param memory
+  * @param cores
+  */
+
+class WorkerInfo(val id: String, val host: String, val port: Int, val memory: Int, val cores: Int) {
+
+  var lastHeartbearTime : Long = _
+}
+</code></pre><h3 id="RemoteMsg"><a href="#RemoteMsg" class="headerlink" title="RemoteMsg"></a>RemoteMsg</h3><pre><code>trait RemoteMsg extends Serializable
+
+//Worker -&gt; Master 的case class,内容为worker信息,继承RemoteMsg
+case class RegisterWorker(id: String, host: String, port: Int, memory: Int, cores: Int) extends RemoteMsg
+
+case class Heartbeat(workerId: String) extends RemoteMsg
+
+//Master -&gt; Worker 的case class,消息内容为主机的url,继承RemoteMsg
+case class RegisteredWorker(masterUrl: String) extends RemoteMsg
+
+//Worker -&gt; self
+case object SendHeartbeat
+
+//Master -&gt; self
+case object CheckTimeOutWorker
+</code></pre></div><script type="text/javascript" src="/js/share.js?v=0.0.1" async></script><a data-url="http://spark8.tech/2016/02/15/scalarpc/" data-id="cirgftzl8002warw2vitek4iu" class="article-share-link">分享到</a><div class="tags"><a href="/tags/scala/">scala</a></div><div class="post-nav"><a href="/2016/02/18/scalayszh/" class="pre">Scala—隐式转换实践</a><a href="/2016/02/13/scalacurry/" class="next">Scala——使用Currry实现视图界定</a></div><div id="disqus_thread"><script>var disqus_shortname = 'sparkliwei';
+var disqus_identifier = '2016/02/15/scalarpc/';
+var disqus_title = 'Scala——利用Akka实现的RPC';
+var disqus_url = 'http://spark8.tech/2016/02/15/scalarpc/';
+(function() {
+  var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+  dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+  (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+})();</script><script id="dsq-count-scr" src="//sparkliwei.disqus.com/count.js" async></script></div></div></div></div><div class="pure-u-1-4"><div id="sidebar"><div class="widget"><div class="search-form"><input id="local-search-input" placeholder="Search" type="text" name="q" results="0"/><div id="local-search-result"></div></div></div><div class="widget"><div class="widget-title"><i class="fa fa-folder-o"> 分类</i></div><ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/Linux/">Linux</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/RPC/">RPC</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/Spark/">Spark</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/hadoop/">hadoop</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/redis/">redis</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/scala/">scala</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/storm/">storm</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/zookeeper/">zookeeper</a></li></ul></div><div class="widget"><div class="widget-title"><i class="fa fa-star-o"> 标签</i></div><div class="tagcloud"><a href="/tags/RDD/" style="font-size: 15px;">RDD</a> <a href="/tags/Spark/" style="font-size: 15px;">Spark</a> <a href="/tags/hadoop/" style="font-size: 15px;">hadoop</a> <a href="/tags/RPC/" style="font-size: 15px;">RPC</a> <a href="/tags/flume/" style="font-size: 15px;">flume</a> <a href="/tags/MR/" style="font-size: 15px;">MR</a> <a href="/tags/HA/" style="font-size: 15px;">HA</a> <a href="/tags/HDFS/" style="font-size: 15px;">HDFS</a> <a href="/tags/hive/" style="font-size: 15px;">hive</a> <a href="/tags/MapReduce/" style="font-size: 15px;">MapReduce</a> <a href="/tags/map-reduce/" style="font-size: 15px;">map reduce</a> <a href="/tags/Linux/" style="font-size: 15px;">Linux</a> <a href="/tags/Redis/" style="font-size: 15px;">Redis</a> <a href="/tags/redis/" style="font-size: 15px;">redis</a> <a href="/tags/storm/" style="font-size: 15px;">storm</a> <a href="/tags/kafka/" style="font-size: 15px;">kafka</a> <a href="/tags/mysql/" style="font-size: 15px;">mysql</a> <a href="/tags/scala/" style="font-size: 15px;">scala</a> <a href="/tags/Shell脚本/" style="font-size: 15px;">Shell脚本</a> <a href="/tags/推荐系统/" style="font-size: 15px;">推荐系统</a> <a href="/tags/outputformat/" style="font-size: 15px;">outputformat</a> <a href="/tags/zookeeper/" style="font-size: 15px;">zookeeper</a></div></div><div class="widget"><div class="widget-title"><i class="fa fa-file-o"> 最新文章</i></div><ul class="post-list"><li class="post-list-item"><a class="post-list-link" href="/2016/04/25/sparkgb/">Spark1.6—RDD广播变量</a></li><li class="post-list-item"><a class="post-list-link" href="/2016/04/23/sparksortby/">Spark1.6—自定义排序规则，对比Hadoop MR</a></li><li class="post-list-item"><a class="post-list-link" href="/2016/04/20/rdddx/">Spark1.6— RDD 根据电信基站数据计算用户常在地点</a></li><li class="post-list-item"><a class="post-list-link" href="/2016/04/19/sparkfqq/">Spark1.6—RDD自定义分区器Partitioner</a></li><li class="post-list-item"><a class="post-list-link" href="/2016/02/18/scalayx/">Scala—-有序列表合并</a></li><li class="post-list-item"><a class="post-list-link" href="/2016/02/18/scalayszh/">Scala—隐式转换实践</a></li><li class="post-list-item"><a class="post-list-link" href="/2016/02/15/scalarpc/">Scala——利用Akka实现的RPC</a></li><li class="post-list-item"><a class="post-list-link" href="/2016/02/13/scalacurry/">Scala——使用Currry实现视图界定</a></li><li class="post-list-item"><a class="post-list-link" href="/2015/11/12/tjxt/">推荐系统——User CF vs. Item CF</a></li><li class="post-list-item"><a class="post-list-link" href="/2015/10/19/rizhijiankong2/">日志监控告警系统（二）</a></li></ul></div><div class="widget"><div class="widget-title"><i class="fa fa-comment-o"> 最近评论</i></div><script type="text/javascript" src="//sparkliwei.disqus.com/recent_comments_widget.js?num_items=5&amp;hide_avatars=1&amp;avatar_size=32&amp;excerpt_length=20&amp;hide_mods=1"></script></div><div class="widget"><div class="widget-title"><i class="fa fa-external-link"> 友情链接</i></div><ul></ul><a href="http://spark8.tech/" title="spark8" target="_blank">spark8</a><ul></ul><a href="https://github.com/sparkLiwei" title="github" target="_blank">github</a></div></div></div><div class="pure-u-1 pure-u-md-3-4"><div id="footer">© <a href="/." rel="nofollow">Spark8.</a> Powered by<a rel="nofollow" target="_blank" href="https://hexo.io"> Hexo.</a><a rel="nofollow" target="_blank" href="https://github.com/tufu9441/maupassant-hexo"> Theme</a> by<a rel="nofollow" target="_blank" href="https://github.com/pagecho"> Cho.</a></div></div></div><a id="rocket" href="#top" class="show"></a><script type="text/javascript" src="/js/totop.js?v=0.0.1" async></script><script type="text/javascript" src="//cdn.bootcss.com/fancybox/2.1.5/jquery.fancybox.pack.js" async></script><script type="text/javascript" src="/js/fancybox.js?v=0.0.1" async></script><link rel="stylesheet" type="text/css" href="/css/jquery.fancybox.css?v=0.0.1"><script type="text/javascript" src="/js/search.js?v=0.0.1"></script><script>var search_path = 'search.xml';
+if (search_path.length == 0) {
+   search_path = 'search.xml';
+}
+var path = '/' + search_path;
+searchFunc(path, 'local-search-input', 'local-search-result');
+</script><script>(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+ga('create','UA-79665129-1','auto');ga('send','pageview');
+</script><script>var _hmt = _hmt || [];
+(function() {
+  var hm = document.createElement("script");
+  hm.src = "//hm.baidu.com/hm.js?561e14522c8f418b3f35a30cba92c642";
+  var s = document.getElementsByTagName("script")[0];
+  s.parentNode.insertBefore(hm, s);
+  var bp = document.createElement('script');
+  var curProtocol = window.location.protocol.split(':')[0];
+  if (curProtocol === 'https') {
+     bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';
+  }
+  else {
+     bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+  }
+  s.parentNode.insertBefore(bp, s);
+  })();
+</script><script type="text/javascript" src="/js/codeblock-resizer.js?v=0.0.1"></script><script type="text/javascript" src="/js/smartresize.js?v=0.0.1"></script></div></body></html>
