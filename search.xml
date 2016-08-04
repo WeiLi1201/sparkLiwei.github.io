@@ -4,7 +4,7 @@
   
     
     <entry>
-      <title><![CDATA[Spark1.6—RDD广播变量]]></title>
+      <title><![CDATA[Spark1.3—RDD广播变量]]></title>
       <url>http://spark8.tech/2016/04/25/sparkgb/</url>
       <content type="html"><![CDATA[<a id="more"></a>
 <h1 id="需求描述"><a href="#需求描述" class="headerlink" title="需求描述"></a>需求描述</h1><p>根据IP库，统计网站的IP来源，哪些区域比较集中，为广告投放市场做决策依据<br><img src="/images/iptxt.png" alt="ip.txt"><br><img src="/images/httpdata.png" alt="httpdata.log"></p>
@@ -109,7 +109,7 @@
     </entry>
     
     <entry>
-      <title><![CDATA[Spark1.6—自定义排序规则，对比Hadoop MR]]></title>
+      <title><![CDATA[Spark1.3—自定义排序规则，对比Hadoop MR]]></title>
       <url>http://spark8.tech/2016/04/23/sparksortby/</url>
       <content type="html"><![CDATA[<a id="more"></a>
 <h2 id="需求描述"><a href="#需求描述" class="headerlink" title="需求描述"></a>需求描述</h2><p>使用隐式转换，自定义排序规则</p>
@@ -174,7 +174,7 @@ object CustomSort {
     </entry>
     
     <entry>
-      <title><![CDATA[Spark1.6— RDD 根据电信基站数据计算用户常在地点]]></title>
+      <title><![CDATA[Spark1.3— RDD 根据电信基站数据计算用户常在地点]]></title>
       <url>http://spark8.tech/2016/04/20/rdddx/</url>
       <content type="html"><![CDATA[<a id="more"></a>
 <h1 id="需求描述"><a href="#需求描述" class="headerlink" title="需求描述"></a>需求描述</h1><p>现有电信运营商脱敏处理后提供的基站收集到的用户数据，包括电话号码、时间戳、基站信息、信号类型(断开/连接)，以及基站数据对应经纬度信息，求用户前三常在地点。<br><img src="/images/jzsj2.png" alt=""><br><img src="/images/wzsj2.png" alt=""></p>
@@ -314,7 +314,7 @@ object CustomSort {
     </entry>
     
     <entry>
-      <title><![CDATA[Spark1.6—RDD自定义分区器Partitioner]]></title>
+      <title><![CDATA[Spark1.3—RDD自定义分区器Partitioner]]></title>
       <url>http://spark8.tech/2016/04/19/sparkfqq/</url>
       <content type="html"><![CDATA[<a id="more"></a>
 <h1 id="需求描述"><a href="#需求描述" class="headerlink" title="需求描述"></a>需求描述</h1><p>统计网站子域名下点击url页面排名前三的点击次数</p>

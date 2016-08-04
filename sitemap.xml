@@ -2,6 +2,41 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   
   <url>
+    <loc>http://spark8.tech/about/index.html</loc>
+    
+    <lastmod>2016-08-04T14:57:57.000Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://spark8.tech/2016/04/20/rdddx/</loc>
+    
+    <lastmod>2016-08-04T14:52:56.000Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://spark8.tech/2016/04/23/sparksortby/</loc>
+    
+    <lastmod>2016-08-04T14:52:33.000Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://spark8.tech/2016/04/25/sparkgb/</loc>
+    
+    <lastmod>2016-08-04T14:52:28.000Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://spark8.tech/2016/04/19/sparkfqq/</loc>
+    
+    <lastmod>2016-08-04T14:52:23.000Z</lastmod>
+    
+  </url>
+  
+  <url>
     <loc>http://spark8.tech/2015/06/22/hadoopha/</loc>
     
     <lastmod>2016-08-04T14:50:36.000Z</lastmod>
@@ -19,34 +54,6 @@
     <loc>http://spark8.tech/2015/07/20/hivejilian/</loc>
     
     <lastmod>2016-08-04T14:49:58.000Z</lastmod>
-    
-  </url>
-  
-  <url>
-    <loc>http://spark8.tech/2016/04/25/sparkgb/</loc>
-    
-    <lastmod>2016-08-04T14:46:26.000Z</lastmod>
-    
-  </url>
-  
-  <url>
-    <loc>http://spark8.tech/2016/04/19/sparkfqq/</loc>
-    
-    <lastmod>2016-08-04T14:45:46.000Z</lastmod>
-    
-  </url>
-  
-  <url>
-    <loc>http://spark8.tech/2016/04/23/sparksortby/</loc>
-    
-    <lastmod>2016-08-04T14:45:13.000Z</lastmod>
-    
-  </url>
-  
-  <url>
-    <loc>http://spark8.tech/2016/04/20/rdddx/</loc>
-    
-    <lastmod>2016-08-04T14:44:30.000Z</lastmod>
     
   </url>
   
@@ -257,13 +264,6 @@
     <loc>http://spark8.tech/google773c6c88987c81f6.html</loc>
     
     <lastmod>2016-06-21T12:02:27.000Z</lastmod>
-    
-  </url>
-  
-  <url>
-    <loc>http://spark8.tech/about/index.html</loc>
-    
-    <lastmod>2016-06-18T09:40:44.000Z</lastmod>
     
   </url>
   
