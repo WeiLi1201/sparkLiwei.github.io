@@ -44,14 +44,6 @@
     </entry>
     
     <entry>
-      <title><![CDATA[SparkSQL—金融行业应用案例(一)]]></title>
-      <url>http://spark8.tech/2016/06/25/pythontoscala1/</url>
-      <content type="html"><![CDATA[<a id="more"></a>
-<h2 id="需求描述"><a href="#需求描述" class="headerlink" title="需求描述"></a>需求描述</h2><pre><code>此处是网站xiaotao用python写的实现，我用scala实现一遍，纯粹是玩
-</code></pre><h2 id="实现思路"><a href="#实现思路" class="headerlink" title="实现思路"></a>实现思路</h2><h2 id="代码实现"><a href="#代码实现" class="headerlink" title="代码实现"></a>代码实现</h2>]]></content>
-    </entry>
-    
-    <entry>
       <title><![CDATA[游戏运营分析(三) — 离线与实时业务线]]></title>
       <url>http://spark8.tech/2016/06/25/yxyy3/</url>
       <content type="html"><![CDATA[<a id="more"></a>
@@ -64,6 +56,14 @@
       <url>http://spark8.tech/2016/06/25/yxyy4/</url>
       <content type="html"><![CDATA[<a id="more"></a>
 <h2 id="需求描述"><a href="#需求描述" class="headerlink" title="需求描述"></a>需求描述</h2><pre><code>游戏运营分析项目，web及数据展示
+</code></pre><h2 id="实现思路"><a href="#实现思路" class="headerlink" title="实现思路"></a>实现思路</h2><h2 id="代码实现"><a href="#代码实现" class="headerlink" title="代码实现"></a>代码实现</h2>]]></content>
+    </entry>
+    
+    <entry>
+      <title><![CDATA[SparkSQL—金融行业应用案例(一)]]></title>
+      <url>http://spark8.tech/2016/06/25/pythontoscala1/</url>
+      <content type="html"><![CDATA[<a id="more"></a>
+<h2 id="需求描述"><a href="#需求描述" class="headerlink" title="需求描述"></a>需求描述</h2><pre><code>此处是网站xiaotao用python写的实现，我用scala实现一遍，纯粹是玩
 </code></pre><h2 id="实现思路"><a href="#实现思路" class="headerlink" title="实现思路"></a>实现思路</h2><h2 id="代码实现"><a href="#代码实现" class="headerlink" title="代码实现"></a>代码实现</h2>]]></content>
     </entry>
     
@@ -438,104 +438,6 @@ a1.sinks.s1.hdfs.idleTimeout =60
     </entry>
     
     <entry>
-      <title><![CDATA[Zookeeper-分布式共享锁]]></title>
-      <url>http://spark8.tech/2016/06/23/zkfbss/</url>
-      <content type="html"><![CDATA[<a id="more"></a>
-<h2 id="一、需求描述"><a href="#一、需求描述" class="headerlink" title="一、需求描述"></a>一、需求描述</h2><p>  在我们自己的分布式业务系统中，可能会存在某种资源，需要被整个系统的各台服务器共享访问，但是只允许一台服务器同时访问</p>
-<h2 id="二、设计思路"><a href="#二、设计思路" class="headerlink" title="二、设计思路"></a>二、设计思路</h2><ol>
-<li>连接zookeeper，process监听子节点变化事件，接收事件按规则写业务逻辑，并重新注册锁</li>
-<li>向zookeeper注册一把锁</li>
-<li>从zk的锁父目录下，获取所有子节点，并且注册对父节点的监听</li>
-<li>如果争抢资源的程序就只有自己，则可以直接去访问共享资源</li>
-<li><p>访问资源后删除锁</p>
-<h2 id="三、代码开发"><a href="#三、代码开发" class="headerlink" title="三、代码开发"></a>三、代码开发</h2><p> public class DistributedClientLock {</p>
-</li>
-</ol>
-<pre><code>// 会话超时
-private static final int SESSION_TIMEOUT = 2000;
-// zookeeper集群地址
-private String hosts = &quot;mini1:2181,mini2:2181,mini3:2181&quot;;
-private String groupNode = &quot;locks&quot;;
-private String subNode = &quot;sub&quot;;
-private boolean haveLock = false;
-
-private ZooKeeper zk;
-// 记录自己创建的子节点路径
-private volatile String thisPath;
-
-/**
- * 连接zookeeper
- */
-public void connectZookeeper() throws Exception {
-    zk = new ZooKeeper(hosts, SESSION_TIMEOUT, new Watcher() {
-        public void process(WatchedEvent event) {
-            try {
-
-                // 判断事件类型，此处只处理子节点变化事件
-                if (event.getType() == EventType.NodeChildrenChanged &amp;&amp; event.getPath().equals(&quot;/&quot; + groupNode)) {
-                    //获取子节点，并对父节点进行监听
-                    List&lt;String&gt; childrenNodes = zk.getChildren(&quot;/&quot; + groupNode, true);
-                    String thisNode = thisPath.substring((&quot;/&quot; + groupNode + &quot;/&quot;).length());
-                    // 去比较是否自己是最小id
-                    Collections.sort(childrenNodes);
-                    if (childrenNodes.indexOf(thisNode) == 0) {
-                        //访问共享资源处理业务，并且在处理完成之后删除锁
-                        doSomething();
-
-                        //重新注册一把新的锁
-                        thisPath = zk.create(&quot;/&quot; + groupNode + &quot;/&quot; + subNode, null, Ids.OPEN_ACL_UNSAFE,
-                                CreateMode.EPHEMERAL_SEQUENTIAL);
-                    }
-                }
-        } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-    });
-
-    // 1、程序一进来就先注册一把锁到zk上
-    thisPath = zk.create(&quot;/&quot; + groupNode + &quot;/&quot; + subNode, null, Ids.OPEN_ACL_UNSAFE,
-            CreateMode.EPHEMERAL_SEQUENTIAL);
-
-    // wait一小会，便于观察
-    Thread.sleep(new Random().nextInt(1000));
-
-    // 从zk的锁父目录下，获取所有子节点，并且注册对父节点的监听
-    List&lt;String&gt; childrenNodes = zk.getChildren(&quot;/&quot; + groupNode, true);
-
-    // 如果争抢资源的程序就只有自己，则可以直接去访问共享资源 
-    if (childrenNodes.size() == 1) {
-        doSomething();
-        thisPath = zk.create(&quot;/&quot; + groupNode + &quot;/&quot; + subNode, null, Ids.OPEN_ACL_UNSAFE,
-                CreateMode.EPHEMERAL_SEQUENTIAL);
-    }
-}
-
-/**
- * 处理业务逻辑，并且在最后释放锁
- */
-private void doSomething() throws Exception {
-    try {
-        System.out.println(&quot;gain lock: &quot; + thisPath);
-        Thread.sleep(2000);
-        // do something
-    } finally {
-        System.out.println(&quot;finished: &quot; + thisPath);
-//删除之前的锁节点
-        zk.delete(this.thisPath, -1);
-    }
-}
-
-public static void main(String[] args) throws Exception {
-    DistributedClientLock dl = new DistributedClientLock();
-    dl.connectZookeeper();
-    Thread.sleep(Long.MAX_VALUE);
-}
-</code></pre><p>}</p>
-]]></content>
-    </entry>
-    
-    <entry>
       <title><![CDATA[Zookeeper-服务器上下线动态感知]]></title>
       <url>http://spark8.tech/2016/06/23/zkfbs/</url>
       <content type="html"><![CDATA[<a id="more"></a>
@@ -675,6 +577,104 @@ public static void main(String[] args) throws Exception {
     </entry>
     
     <entry>
+      <title><![CDATA[Zookeeper-分布式共享锁]]></title>
+      <url>http://spark8.tech/2016/06/23/zkfbss/</url>
+      <content type="html"><![CDATA[<a id="more"></a>
+<h2 id="一、需求描述"><a href="#一、需求描述" class="headerlink" title="一、需求描述"></a>一、需求描述</h2><p>  在我们自己的分布式业务系统中，可能会存在某种资源，需要被整个系统的各台服务器共享访问，但是只允许一台服务器同时访问</p>
+<h2 id="二、设计思路"><a href="#二、设计思路" class="headerlink" title="二、设计思路"></a>二、设计思路</h2><ol>
+<li>连接zookeeper，process监听子节点变化事件，接收事件按规则写业务逻辑，并重新注册锁</li>
+<li>向zookeeper注册一把锁</li>
+<li>从zk的锁父目录下，获取所有子节点，并且注册对父节点的监听</li>
+<li>如果争抢资源的程序就只有自己，则可以直接去访问共享资源</li>
+<li><p>访问资源后删除锁</p>
+<h2 id="三、代码开发"><a href="#三、代码开发" class="headerlink" title="三、代码开发"></a>三、代码开发</h2><p> public class DistributedClientLock {</p>
+</li>
+</ol>
+<pre><code>// 会话超时
+private static final int SESSION_TIMEOUT = 2000;
+// zookeeper集群地址
+private String hosts = &quot;mini1:2181,mini2:2181,mini3:2181&quot;;
+private String groupNode = &quot;locks&quot;;
+private String subNode = &quot;sub&quot;;
+private boolean haveLock = false;
+
+private ZooKeeper zk;
+// 记录自己创建的子节点路径
+private volatile String thisPath;
+
+/**
+ * 连接zookeeper
+ */
+public void connectZookeeper() throws Exception {
+    zk = new ZooKeeper(hosts, SESSION_TIMEOUT, new Watcher() {
+        public void process(WatchedEvent event) {
+            try {
+
+                // 判断事件类型，此处只处理子节点变化事件
+                if (event.getType() == EventType.NodeChildrenChanged &amp;&amp; event.getPath().equals(&quot;/&quot; + groupNode)) {
+                    //获取子节点，并对父节点进行监听
+                    List&lt;String&gt; childrenNodes = zk.getChildren(&quot;/&quot; + groupNode, true);
+                    String thisNode = thisPath.substring((&quot;/&quot; + groupNode + &quot;/&quot;).length());
+                    // 去比较是否自己是最小id
+                    Collections.sort(childrenNodes);
+                    if (childrenNodes.indexOf(thisNode) == 0) {
+                        //访问共享资源处理业务，并且在处理完成之后删除锁
+                        doSomething();
+
+                        //重新注册一把新的锁
+                        thisPath = zk.create(&quot;/&quot; + groupNode + &quot;/&quot; + subNode, null, Ids.OPEN_ACL_UNSAFE,
+                                CreateMode.EPHEMERAL_SEQUENTIAL);
+                    }
+                }
+        } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    });
+
+    // 1、程序一进来就先注册一把锁到zk上
+    thisPath = zk.create(&quot;/&quot; + groupNode + &quot;/&quot; + subNode, null, Ids.OPEN_ACL_UNSAFE,
+            CreateMode.EPHEMERAL_SEQUENTIAL);
+
+    // wait一小会，便于观察
+    Thread.sleep(new Random().nextInt(1000));
+
+    // 从zk的锁父目录下，获取所有子节点，并且注册对父节点的监听
+    List&lt;String&gt; childrenNodes = zk.getChildren(&quot;/&quot; + groupNode, true);
+
+    // 如果争抢资源的程序就只有自己，则可以直接去访问共享资源 
+    if (childrenNodes.size() == 1) {
+        doSomething();
+        thisPath = zk.create(&quot;/&quot; + groupNode + &quot;/&quot; + subNode, null, Ids.OPEN_ACL_UNSAFE,
+                CreateMode.EPHEMERAL_SEQUENTIAL);
+    }
+}
+
+/**
+ * 处理业务逻辑，并且在最后释放锁
+ */
+private void doSomething() throws Exception {
+    try {
+        System.out.println(&quot;gain lock: &quot; + thisPath);
+        Thread.sleep(2000);
+        // do something
+    } finally {
+        System.out.println(&quot;finished: &quot; + thisPath);
+//删除之前的锁节点
+        zk.delete(this.thisPath, -1);
+    }
+}
+
+public static void main(String[] args) throws Exception {
+    DistributedClientLock dl = new DistributedClientLock();
+    dl.connectZookeeper();
+    Thread.sleep(Long.MAX_VALUE);
+}
+</code></pre><p>}</p>
+]]></content>
+    </entry>
+    
+    <entry>
       <title><![CDATA[Hive ——内置函数与UDF实现]]></title>
       <url>http://spark8.tech/2016/06/23/udf/</url>
       <content type="html"><![CDATA[<a id="more"></a>
@@ -786,157 +786,6 @@ return movie + &quot;\t&quot; + rate + &quot;\t&quot; + timeStamp + &quot;\t&quo
     </entry>
     
     <entry>
-      <title><![CDATA[Hadoop2.x——左连接]]></title>
-      <url>http://spark8.tech/2016/06/22/hadoopzlj/</url>
-      <content type="html"><![CDATA[<a id="more"></a>
-<h2 id="需求描述"><a href="#需求描述" class="headerlink" title="需求描述"></a>需求描述</h2><p>有两张表，关联字段为pid，订单表中没有商品名称，需要对数据进行补全，使用MapReduce思想，进行编程。</p>
-<blockquote>
-<p> 订单数据表t_order：<br>  id    date        pid      amount<br> 1001    20150710    P0001    2<br> 1002    20150710    P0001    3<br> 1002    20150710    P0002    3</p>
-<p> 商品信息表t_product<br>  id        pname    category_id    price<br>  P0001    小米5    1000        2<br>  P0002    锤子T1    1000        3</p>
-<p>订单表中没有商品名称，需要对数据进行补全<br>1001    20150710    P0001    小米5     2<br>1002    20150710    P0001    小米5     3<br>1002    20150710    P0002    锤子T3  3</p>
-</blockquote>
-<h2 id="设计思路"><a href="#设计思路" class="headerlink" title="设计思路"></a>设计思路</h2><p>数据输入：order.txt、pd.txt<br>1、Map 阶段</p>
-<blockquote>
-<p>KEYOUT  pid<br>VALUEOUT OrderAllInfo writealbe(write,read)<br>输入两个文件的数据<br>VALUEIN 1001      20150710    P0001    2<br>VALUEIN 1001      20150710    P0001    2<br>VALUEIN 1001      20150710    P0001    2<br>来自不同的文件，文件名不一样<br>VALUEIN   P0001    小米5    1000    2<br>VALUEIN   P0001    小米5    1000    2<br>来自不同的文件，文件名不一样<br>能够在OrderAllInfo中加入一个tag标志，当文件名等于order，<br>tag取值为1 当文件名等于product时，tag取值为0<br>2、Reduce 阶段<br>KEYIN   pid<br>VALUEiN        iterable\<orderallinfo,orderallinfo,orderallinfo,orderallinfo\></orderallinfo,orderallinfo,orderallinfo,orderallinfo\></p>
-<p>OrderAllInfo tag=0 记录，商品记录只有一条      商品表<br>OrderAllInfo tag=1                                                     订单表<br>OrderAllInfo tag=1                          订单表<br>过程<br>OrderAllInfo tag=1 +  OrderAllInfo tag=0   = 新的 OrderAllInfo<br>OrderAllInfo tag=1 +  OrderAllInfo tag=0   = 新的 OrderAllInfo<br>得到<br>1001     20150710    P0001    小米5     2<br>1002    20150710    P0001    小米5     3<br>1002    20150710    P0002    锤子T3     3</p>
-<h2 id="代码开发"><a href="#代码开发" class="headerlink" title="代码开发"></a>代码开发</h2><p>源码请参考<a href="www.baidu.com">github链接</a>,以下为核心实现。<br>1.驱动类<br><img src="/images/zljqdl.png" alt="" title="zljqdl"><br>2.Map类<br><img src="/images/zljmapl.png" alt="" title="zljmap"><br>3.Reduce类<br><img src="/images/zljreducel.png" alt="" title="zljreducel"></p>
-</blockquote>
-]]></content>
-    </entry>
-    
-    <entry>
-      <title><![CDATA[Hadoop2.x——实现HA]]></title>
-      <url>http://spark8.tech/2016/06/22/hadoopha/</url>
-      <content type="html"><![CDATA[<a id="more"></a>
-<h2 id="HA的运作机制"><a href="#HA的运作机制" class="headerlink" title="HA的运作机制"></a>HA的运作机制</h2><p>(1)  hadoop-HA集群运作机制介绍<br>所谓HA，即高可用（7*24小时不中断服务）<br>实现高可用最关键的是消除单点故障<br>hadoop-ha严格来说应该分成各个组件的HA机制——HDFS的HA、YARN的HA<br>(2) HDFS的HA机制详解<br>通过双namenode消除单点故障<br>双namenode协调工作的要点：<br>A、元数据管理方式需要改变：<br>内存中各自保存一份元数据<br>Edits日志只能有一份，只有Active状态的namenode节点可以做写操作<br>两个namenode都可以读取edits<br>共享的edits放在一个共享存储中管理（qjournal和NFS两个主流实现）<br>B、需要一个状态管理功能模块<br>实现了一个zkfailover，常驻在每一个namenode所在的节点<br>每一个zkfailover负责监控自己所在namenode节点，利用zk进行状态标识<br>当需要进行状态切换时，由zkfailover来负责切换<br>切换时需要防止brain split现象的发生</p>
-<h2 id="HDFS-HA图解"><a href="#HDFS-HA图解" class="headerlink" title="HDFS-HA图解"></a>HDFS-HA图解</h2><p><img src="/images/hdfsha.png" alt="" title="hdfsha"></p>
-<h2 id="HA集群的安装部署"><a href="#HA集群的安装部署" class="headerlink" title="HA集群的安装部署"></a>HA集群的安装部署</h2><h3 id="集群节点规划"><a href="#集群节点规划" class="headerlink" title="集群节点规划"></a>集群节点规划</h3><p>10节点<br><img src="/images/10jiedian.png" alt="" title="10jiedian"><br>8节点<br><img src="/images/8jiedian.png" alt="" title="8jiedian"></p>
-<h3 id="环境准备"><a href="#环境准备" class="headerlink" title="环境准备"></a>环境准备</h3><p>环境准备<br>a/linux系统准备<br>ip地址配置<br>hostname配置<br>hosts映射配置<br>防火墙关闭<br>init启动级别修改3<br>sudoers加入hadoop用户<br>ssh免密登陆配置</p>
-<p>b/java环境的配置<br>上传jdk，解压，修改/etc/profile</p>
-<p> c/zookeeper集群的部署</p>
-<h3 id="配置文件"><a href="#配置文件" class="headerlink" title="配置文件"></a>配置文件</h3><p>core-site.xml</p>
-<pre><code>&lt;configuration&gt;
-&lt;!-- 指定hdfs的nameservice为ns1 --&gt;
-&lt;property&gt;
-&lt;name&gt;fs.defaultFS&lt;/name&gt;
-&lt;value&gt;hdfs://ns1/&lt;/value&gt;
-&lt;/property&gt;
-&lt;!-- 指定hadoop临时目录 --&gt;
-&lt;property&gt;
-&lt;name&gt;hadoop.tmp.dir&lt;/name&gt;
-&lt;value&gt;/home/hadoop/app/hadoop-2.4.1/tmp&lt;/value&gt;
-&lt;/property&gt;
-
-&lt;!-- 指定zookeeper地址 --&gt;
-&lt;property&gt;
-&lt;name&gt;ha.zookeeper.quorum&lt;/name&gt;
-&lt;value&gt;weekend05:2181,weekend06:2181,weekend07:2181&lt;/value&gt;
-&lt;/property&gt;
-&lt;/configuration&gt;
-</code></pre><p>hdfs-site.xml</p>
-<pre><code>&lt;configuration&gt;
-&lt;!--指定hdfs的nameservice为ns1，需要和core-site.xml中的保持一致 --&gt;
-&lt;property&gt;
-&lt;name&gt;dfs.nameservices&lt;/name&gt;
-&lt;value&gt;ns1&lt;/value&gt;
-&lt;/property&gt;
-&lt;!-- ns1下面有两个NameNode，分别是nn1，nn2 --&gt;
-&lt;property&gt;
-&lt;name&gt;dfs.ha.namenodes.ns1&lt;/name&gt;
-&lt;value&gt;nn1,nn2&lt;/value&gt;
-&lt;/property&gt;
-&lt;!-- nn1的RPC通信地址 --&gt;
-&lt;property&gt;
-&lt;name&gt;dfs.namenode.rpc-address.ns1.nn1&lt;/name&gt;
-&lt;value&gt;weekend01:9000&lt;/value&gt;
-&lt;/property&gt;
-&lt;!-- nn1的http通信地址 --&gt;
-&lt;property&gt;
-&lt;name&gt;dfs.namenode.http-address.ns1.nn1&lt;/name&gt;
-&lt;value&gt;weekend01:50070&lt;/value&gt;
-&lt;/property&gt;
-&lt;!-- nn2的RPC通信地址 --&gt;
-&lt;property&gt;
-&lt;name&gt;dfs.namenode.rpc-address.ns1.nn2&lt;/name&gt;
-&lt;value&gt;weekend02:9000&lt;/value&gt;
-&lt;/property&gt;
-&lt;!-- nn2的http通信地址 --&gt;
-&lt;property&gt;
-&lt;name&gt;dfs.namenode.http-address.ns1.nn2&lt;/name&gt;
-&lt;value&gt;weekend02:50070&lt;/value&gt;
-&lt;/property&gt;
-&lt;!-- 指定NameNode的edits元数据在JournalNode上的存放位置 --&gt;
-&lt;property&gt;
-&lt;name&gt;dfs.namenode.shared.edits.dir&lt;/name&gt;
-&lt;value&gt;qjournal://weekend05:8485;weekend06:8485;weekend07:8485/ns1&lt;/value&gt;
-&lt;/property&gt;
-&lt;!-- 指定JournalNode在本地磁盘存放数据的位置 --&gt;
-&lt;property&gt;
-&lt;name&gt;dfs.journalnode.edits.dir&lt;/name&gt;
-&lt;value&gt;/home/hadoop/app/hadoop-2.4.1/journaldata&lt;/value&gt;
-&lt;/property&gt;
-&lt;!-- 开启NameNode失败自动切换 --&gt;
-&lt;property&gt;
-&lt;name&gt;dfs.ha.automatic-failover.enabled&lt;/name&gt;
-&lt;value&gt;true&lt;/value&gt;
-&lt;/property&gt;
-&lt;!-- 配置失败自动切换实现方式 --&gt;
-&lt;property&gt;
-&lt;name&gt;dfs.client.failover.proxy.provider.ns1&lt;/name&gt;
-&lt;value&gt;org.apache.hadoop.hdfs.server.namenode.ha.ConfiguredFailoverProxyProvider&lt;/value&gt;
-&lt;/property&gt;
-&lt;!-- 配置隔离机制方法，多个机制用换行分割，即每个机制暂用一行--&gt;
-&lt;property&gt;
-&lt;name&gt;dfs.ha.fencing.methods&lt;/name&gt;
-&lt;value&gt;
-sshfence
-shell(/bin/true)
-&lt;/value&gt;
-&lt;/property&gt;
-&lt;!-- 使用sshfence隔离机制时需要ssh免登陆 --&gt;
-&lt;property&gt;
-&lt;name&gt;dfs.ha.fencing.ssh.private-key-files&lt;/name&gt;
-&lt;value&gt;/home/hadoop/.ssh/id_rsa&lt;/value&gt;
-&lt;/property&gt;
-&lt;!-- 配置sshfence隔离机制超时时间 --&gt;
-&lt;property&gt;
-&lt;name&gt;dfs.ha.fencing.ssh.connect-timeout&lt;/name&gt;
-&lt;value&gt;30000&lt;/value&gt;
-&lt;/property&gt;
-/configuration&gt;
-</code></pre><h3 id="集群运维测试"><a href="#集群运维测试" class="headerlink" title="集群运维测试"></a>集群运维测试</h3><p>HA集群中两个namenode状态的管理命令</p>
-<blockquote>
-<p><a href="#">root@mini2 hadoop-2.6.4</a># bin/hdfs haadmin<br>Usage: DFSHAAdmin <a href="#">-ns \<nameserviceid\></nameserviceid\></a><br>[-transitionToActive \<serviceid\> <a href="#">–forceactive</a>]<br><a href="#">-transitionToStandby \<serviceid\></serviceid\></a><br>[-failover <a href="#">–forcefence</a> <a href="#">–forceactive</a> \<serviceid\> \<serviceid\>]<br><a href="#">-getServiceState \<serviceid\></serviceid\></a><br><a href="#">-checkHealth \<serviceid\></serviceid\></a><br><a href="#">-help \<command\></command\></a><br>示例： 切换nn2为active<br>bin/hdfs haadmin -transitionToActive nn2 –forcemanual</serviceid\></serviceid\></serviceid\></p>
-<h4 id="Datanode动态上下线"><a href="#Datanode动态上下线" class="headerlink" title="Datanode动态上下线"></a>Datanode动态上下线</h4><p>Datanode动态上下线很简单，步骤如下：<br>a)    准备一台服务器，设置好环境<br>b)    部署hadoop的安装包，并同步集群配置<br>c)    联网上线，新datanode会自动加入集群<br>d)    如果是一次增加大批datanode，还应该做集群负载重均衡</p>
-<h4 id="Namenode状态切换管理"><a href="#Namenode状态切换管理" class="headerlink" title="Namenode状态切换管理"></a>Namenode状态切换管理</h4><p>使用的命令上hdfs  haadmin<br>可用 hdfs  haadmin –help查看所有帮助信息<br><img src="/images/hahelp.png" alt="" title="hahelp"><br>可以看到，状态操作的命令示例：<br>查看namenode工作状态<br>    hdfs haadmin -getServiceState nn1<br>将standby状态namenode切换到active<br>    hdfs haadmin –transitionToActive nn1<br>将active状态namenode切换到standby<br>    hdfs haadmin –transitionToStandby nn2</p>
-<h4 id="数据块的balance"><a href="#数据块的balance" class="headerlink" title="数据块的balance"></a>数据块的balance</h4><p>启动balancer的命令：<br>start-balancer.sh -threshold 8<br>运行之后，会有Balancer进程出现：<br><img src="/images/balanceha.png" alt="" title="balanceha"><br>上述命令设置了Threshold为8%，那么执行balancer命令的时候，首先统计所有DataNode的磁盘利用率的均值，然后判断如果某一个DataNode的磁盘利用率超过这个均值Threshold，那么将会把这个DataNode的block转移到磁盘利用率低的DataNode，这对于新节点的加入来说十分有用。Threshold的值为1到100之间，不显示的进行参数设置的话，默认是10。</p>
-<h3 id="HA下hdfs-api变化"><a href="#HA下hdfs-api变化" class="headerlink" title="HA下hdfs-api变化"></a>HA下hdfs-api变化</h3><p>客户端需要nameservice的配置信息，其他不变</p>
-</blockquote>
-<pre><code>/**
-如果访问的是一个ha机制的集群
-则一定要把core-site.xml和hdfs-site.xml配置文件放在客户端程序的classpath下
-以让客户端能够理解hdfs://ns1/中  “ns1”是一个ha机制中的namenode对——nameservice
-以及知道ns1下具体的namenode通信地址
-@author
- *
- */
-public class UploadFile {
-    public static void main(String[] args) throws Exception  {
-
-    Configuration conf = new Configuration();
-    conf.set(&quot;fs.defaultFS&quot;, &quot;hdfs://ns1/&quot;);
-
-    FileSystem fs = FileSystem.get(new URI(&quot;hdfs://ns1/&quot;),conf,&quot;hadoop&quot;);
-
-    fs.copyFromLocalFile(new Path(&quot;g:/eclipse-jee-luna-SR1-linux-gtk.tar.gz&quot;), new Path(&quot;hdfs://ns1/&quot;));
-    fs.close(); 
-    }
-}
-</code></pre><p>Federation下 mr程序运行的staging提交目录问题<br>        <property><br>          <name>yarn.app.mapreduce.am.staging-dir</name><br>          <value>/bi/tmp/hadoop-yarn/staging</value><br>          <description>The staging dir used while submitting jobs.<br>          </description><br>        </property></p>
-]]></content>
-    </entry>
-    
-    <entry>
       <title><![CDATA[Hadoop2.x——共同好友问题]]></title>
       <url>http://spark8.tech/2016/06/22/gongtonghaoyou/</url>
       <content type="html"><![CDATA[<a id="more"></a>
@@ -1023,127 +872,6 @@ public class UploadFile {
         FileOutputFormat.setOutputPath(job, new Path(&quot;C:\\wordcount\\friends-step2&quot;));
         job.waitForCompletion(true);
     }
-}
-</code></pre>]]></content>
-    </entry>
-    
-    <entry>
-      <title><![CDATA[Hadoop2.x——倒排索引]]></title>
-      <url>http://spark8.tech/2016/06/22/daopaisuoyin/</url>
-      <content type="html"><![CDATA[<a id="more"></a>
-<h2 id="需求描述"><a href="#需求描述" class="headerlink" title="需求描述"></a>需求描述</h2><p>文档中找单词，当文档数越来越多时，直接打开文档找单词不靠谱(一个一个文档找比较慢)。<br>倒排索引：将单词出现在文档中的位置，记录下来。<br>如：a  -&gt;  1.txt,11.txt,56.txt</p>
-<h2 id="设计思路"><a href="#设计思路" class="headerlink" title="设计思路"></a>设计思路</h2><p>1、计算某个单词出现在一个文档中的次数<br>MR1阶段</p>
-<blockquote>
-<p> 单词     文档名称 次数<br>  分词器 IK<br>  获取文件名 inputSplit<br>  我和我的祖国 一刻也不能分割<br>  我<br>  我的祖国<br>  祖国<br>  ……<br>Map ：<br>KEYOUT: 我:文档名称<br> VALUEOUT: 1<br>SHUFFLE:<br>我:文档名称  Iterable1,1,1,1,1,1,1,1<br>Reduce：<br>我:文档名称 8<br>KEYOUT: 我<br>VALUEOUT： 文档名称 8</p>
-</blockquote>
-<p>2、计算一个单词出现在所有文档中的次数<br>MR2阶段</p>
-<blockquote>
-<p>MAP<br>KEYIN:我<br>VALUEIN:文档名称 8<br>SHUFFLE:<br>我:  Iterable[“文档名称1 8”,”文档名称2 18”]<br>Reduce：<br>KEYOUT:我<br>VALUEOUT：权重值 ，总出现次数，“文档名称1 8”，“文档名称2 18”</p>
-<h2 id="代码开发"><a href="#代码开发" class="headerlink" title="代码开发"></a>代码开发</h2><p>源码请参见<a href="www.baidu.com">github链接</a><br>1.驱动类</p>
-</blockquote>
-<pre><code>public class IndexJob {
-public static void main(String[] args) throws Exception {
-    String map1inputpath = &quot;&quot;;
-    String reduce1outputmap2inputpath = &quot;&quot;;
-    String respath = &quot;&quot;;
-
-    //第一个job
-    Job job = Job.getInstance();
-
-    job.setMapperClass(IndexMap1.class);
-    job.setMapOutputKeyClass(Text.class);
-    job.setMapOutputValueClass(IntWritable.class);
-
-    job.setReducerClass(IndexReduce1.class);
-    job.setOutputKeyClass(Text.class);
-    job.setOutputValueClass(Text.class);
-
-    job.setNumReduceTasks(2);
-
-    FileInputFormat.setInputPaths(job,new Path(&quot;/&quot;));
-    FileOutputFormat.setOutputPath(job, new Path(&quot;/&quot;));
-
-    if(job.waitForCompletion(true)){
-        //第二个job
-        //可不可以公用一个job
-        job.setMapperClass(IndexMap2.class);
-        job.setMapOutputKeyClass(Text.class);
-        job.setMapOutputValueClass(Text.class);
-
-        job.setReducerClass(IndexReduce2.class);
-        job.setOutputKeyClass(Text.class);
-        job.setOutputValueClass(Text.class);
-
-        job.setNumReduceTasks(2);
-
-        FileInputFormat.setInputPaths(job,new Path(&quot;/&quot;));
-        FileOutputFormat.setOutputPath(job, new Path(&quot;/&quot;));
-
-        job.waitForCompletion(true);
-    }
-}
-}
-</code></pre><p>2.IndexMap1类</p>
-<pre><code>public class IndexMap1 extends Mapper&lt;LongWritable,Text,Text,IntWritable&gt; {
-
-@Override
-protected void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
-    byte[] bytes = value.getBytes();
-
-    //2、对数据进行分词
-    InputStream inputStream = new ByteArrayInputStream(bytes);
-    Reader reader = new InputStreamReader(inputStream);
-    IKSegmenter ikSegmenter = new IKSegmenter(reader, true);
-
-    //获得文档名称
-    FileSplit inputSplit = (FileSplit) context.getInputSplit();
-    String fileName  = inputSplit.getPath().getName();
-
-    //4、map端词条出现次数统计
-    Lexeme t;
-    while ((t = ikSegmenter.next()) != null) {
-        context.write(new Text(t.getLexemeText()+&quot;:&quot;+fileName),new IntWritable(1));
-    }
-}
-}
-</code></pre><p>3.Index2Reduce1类</p>
-<pre><code>public class IndexReduce1 extends Reducer&lt;Text,IntWritable,Text,Text&gt; {
-
-@Override
-protected void reduce(Text key, Iterable&lt;IntWritable&gt; values, Context context) throws IOException, InterruptedException {
-    Integer sum=0;
-    for(IntWritable count:values){
-        sum+=count.get();
-    }
-    String[] arrStr = key.toString().split(&quot;:&quot;);
-    key.set(arrStr[0]);
-    context.write(key,new Text(arrStr[1]+&quot;:&quot;+sum));
-}
-}
-</code></pre><p>4.IndexMap2类</p>
-<pre><code>public class IndexMap2 extends Mapper&lt;Text,LongWritable,Text,Text&gt; {
-
-@Override
-protected void map(Text key, LongWritable value, Context context) throws IOException, InterruptedException {
-    String[] arrStr = value.toString().split(&quot; &quot;);
-    context.write(new Text(arrStr[0]),new Text(arrStr[1]));
-}
-}
-</code></pre><p>5.IndexReduce2类</p>
-<pre><code>public class IndexReduce2 extends Reducer&lt;Text,Text,Text,Text&gt; {
-
-@Override
-protected void reduce(Text key, Iterable&lt;Text&gt; values, Context context) throws IOException, InterruptedException {
-    int sum =0;
-    StringBuffer sb = new StringBuffer();
-    for(Text txt:values){
-        sb.append(txt);
-        sb.append(&quot;,&quot;);
-        String[] arrStr = values.toString().split(&quot;:&quot;);
-        sum += Integer.parseInt(arrStr[1]);
-    }
-    context.write(key,new Text(sum + &quot;&quot; + &quot;\t&quot; + sb.toString()));
-}
 }
 </code></pre>]]></content>
     </entry>
@@ -1398,6 +1126,278 @@ public class LogEnhancer extends Configured implements Tool{
     }
 
 
+}
+</code></pre>]]></content>
+    </entry>
+    
+    <entry>
+      <title><![CDATA[Hadoop2.x——左连接]]></title>
+      <url>http://spark8.tech/2016/06/22/hadoopzlj/</url>
+      <content type="html"><![CDATA[<a id="more"></a>
+<h2 id="需求描述"><a href="#需求描述" class="headerlink" title="需求描述"></a>需求描述</h2><p>有两张表，关联字段为pid，订单表中没有商品名称，需要对数据进行补全，使用MapReduce思想，进行编程。</p>
+<blockquote>
+<p> 订单数据表t_order：<br>  id    date        pid      amount<br> 1001    20150710    P0001    2<br> 1002    20150710    P0001    3<br> 1002    20150710    P0002    3</p>
+<p> 商品信息表t_product<br>  id        pname    category_id    price<br>  P0001    小米5    1000        2<br>  P0002    锤子T1    1000        3</p>
+<p>订单表中没有商品名称，需要对数据进行补全<br>1001    20150710    P0001    小米5     2<br>1002    20150710    P0001    小米5     3<br>1002    20150710    P0002    锤子T3  3</p>
+</blockquote>
+<h2 id="设计思路"><a href="#设计思路" class="headerlink" title="设计思路"></a>设计思路</h2><p>数据输入：order.txt、pd.txt<br>1、Map 阶段</p>
+<blockquote>
+<p>KEYOUT  pid<br>VALUEOUT OrderAllInfo writealbe(write,read)<br>输入两个文件的数据<br>VALUEIN 1001      20150710    P0001    2<br>VALUEIN 1001      20150710    P0001    2<br>VALUEIN 1001      20150710    P0001    2<br>来自不同的文件，文件名不一样<br>VALUEIN   P0001    小米5    1000    2<br>VALUEIN   P0001    小米5    1000    2<br>来自不同的文件，文件名不一样<br>能够在OrderAllInfo中加入一个tag标志，当文件名等于order，<br>tag取值为1 当文件名等于product时，tag取值为0<br>2、Reduce 阶段<br>KEYIN   pid<br>VALUEiN        iterable\<orderallinfo,orderallinfo,orderallinfo,orderallinfo\></orderallinfo,orderallinfo,orderallinfo,orderallinfo\></p>
+<p>OrderAllInfo tag=0 记录，商品记录只有一条      商品表<br>OrderAllInfo tag=1                                                     订单表<br>OrderAllInfo tag=1                          订单表<br>过程<br>OrderAllInfo tag=1 +  OrderAllInfo tag=0   = 新的 OrderAllInfo<br>OrderAllInfo tag=1 +  OrderAllInfo tag=0   = 新的 OrderAllInfo<br>得到<br>1001     20150710    P0001    小米5     2<br>1002    20150710    P0001    小米5     3<br>1002    20150710    P0002    锤子T3     3</p>
+<h2 id="代码开发"><a href="#代码开发" class="headerlink" title="代码开发"></a>代码开发</h2><p>源码请参考<a href="www.baidu.com">github链接</a>,以下为核心实现。<br>1.驱动类<br><img src="/images/zljqdl.png" alt="" title="zljqdl"><br>2.Map类<br><img src="/images/zljmapl.png" alt="" title="zljmap"><br>3.Reduce类<br><img src="/images/zljreducel.png" alt="" title="zljreducel"></p>
+</blockquote>
+]]></content>
+    </entry>
+    
+    <entry>
+      <title><![CDATA[Hadoop2.x——实现HA]]></title>
+      <url>http://spark8.tech/2016/06/22/hadoopha/</url>
+      <content type="html"><![CDATA[<a id="more"></a>
+<h2 id="HA的运作机制"><a href="#HA的运作机制" class="headerlink" title="HA的运作机制"></a>HA的运作机制</h2><p>(1)  hadoop-HA集群运作机制介绍<br>所谓HA，即高可用（7*24小时不中断服务）<br>实现高可用最关键的是消除单点故障<br>hadoop-ha严格来说应该分成各个组件的HA机制——HDFS的HA、YARN的HA<br>(2) HDFS的HA机制详解<br>通过双namenode消除单点故障<br>双namenode协调工作的要点：<br>A、元数据管理方式需要改变：<br>内存中各自保存一份元数据<br>Edits日志只能有一份，只有Active状态的namenode节点可以做写操作<br>两个namenode都可以读取edits<br>共享的edits放在一个共享存储中管理（qjournal和NFS两个主流实现）<br>B、需要一个状态管理功能模块<br>实现了一个zkfailover，常驻在每一个namenode所在的节点<br>每一个zkfailover负责监控自己所在namenode节点，利用zk进行状态标识<br>当需要进行状态切换时，由zkfailover来负责切换<br>切换时需要防止brain split现象的发生</p>
+<h2 id="HDFS-HA图解"><a href="#HDFS-HA图解" class="headerlink" title="HDFS-HA图解"></a>HDFS-HA图解</h2><p><img src="/images/hdfsha.png" alt="" title="hdfsha"></p>
+<h2 id="HA集群的安装部署"><a href="#HA集群的安装部署" class="headerlink" title="HA集群的安装部署"></a>HA集群的安装部署</h2><h3 id="集群节点规划"><a href="#集群节点规划" class="headerlink" title="集群节点规划"></a>集群节点规划</h3><p>10节点<br><img src="/images/10jiedian.png" alt="" title="10jiedian"><br>8节点<br><img src="/images/8jiedian.png" alt="" title="8jiedian"></p>
+<h3 id="环境准备"><a href="#环境准备" class="headerlink" title="环境准备"></a>环境准备</h3><p>环境准备<br>a/linux系统准备<br>ip地址配置<br>hostname配置<br>hosts映射配置<br>防火墙关闭<br>init启动级别修改3<br>sudoers加入hadoop用户<br>ssh免密登陆配置</p>
+<p>b/java环境的配置<br>上传jdk，解压，修改/etc/profile</p>
+<p> c/zookeeper集群的部署</p>
+<h3 id="配置文件"><a href="#配置文件" class="headerlink" title="配置文件"></a>配置文件</h3><p>core-site.xml</p>
+<pre><code>&lt;configuration&gt;
+&lt;!-- 指定hdfs的nameservice为ns1 --&gt;
+&lt;property&gt;
+&lt;name&gt;fs.defaultFS&lt;/name&gt;
+&lt;value&gt;hdfs://ns1/&lt;/value&gt;
+&lt;/property&gt;
+&lt;!-- 指定hadoop临时目录 --&gt;
+&lt;property&gt;
+&lt;name&gt;hadoop.tmp.dir&lt;/name&gt;
+&lt;value&gt;/home/hadoop/app/hadoop-2.4.1/tmp&lt;/value&gt;
+&lt;/property&gt;
+
+&lt;!-- 指定zookeeper地址 --&gt;
+&lt;property&gt;
+&lt;name&gt;ha.zookeeper.quorum&lt;/name&gt;
+&lt;value&gt;weekend05:2181,weekend06:2181,weekend07:2181&lt;/value&gt;
+&lt;/property&gt;
+&lt;/configuration&gt;
+</code></pre><p>hdfs-site.xml</p>
+<pre><code>&lt;configuration&gt;
+&lt;!--指定hdfs的nameservice为ns1，需要和core-site.xml中的保持一致 --&gt;
+&lt;property&gt;
+&lt;name&gt;dfs.nameservices&lt;/name&gt;
+&lt;value&gt;ns1&lt;/value&gt;
+&lt;/property&gt;
+&lt;!-- ns1下面有两个NameNode，分别是nn1，nn2 --&gt;
+&lt;property&gt;
+&lt;name&gt;dfs.ha.namenodes.ns1&lt;/name&gt;
+&lt;value&gt;nn1,nn2&lt;/value&gt;
+&lt;/property&gt;
+&lt;!-- nn1的RPC通信地址 --&gt;
+&lt;property&gt;
+&lt;name&gt;dfs.namenode.rpc-address.ns1.nn1&lt;/name&gt;
+&lt;value&gt;weekend01:9000&lt;/value&gt;
+&lt;/property&gt;
+&lt;!-- nn1的http通信地址 --&gt;
+&lt;property&gt;
+&lt;name&gt;dfs.namenode.http-address.ns1.nn1&lt;/name&gt;
+&lt;value&gt;weekend01:50070&lt;/value&gt;
+&lt;/property&gt;
+&lt;!-- nn2的RPC通信地址 --&gt;
+&lt;property&gt;
+&lt;name&gt;dfs.namenode.rpc-address.ns1.nn2&lt;/name&gt;
+&lt;value&gt;weekend02:9000&lt;/value&gt;
+&lt;/property&gt;
+&lt;!-- nn2的http通信地址 --&gt;
+&lt;property&gt;
+&lt;name&gt;dfs.namenode.http-address.ns1.nn2&lt;/name&gt;
+&lt;value&gt;weekend02:50070&lt;/value&gt;
+&lt;/property&gt;
+&lt;!-- 指定NameNode的edits元数据在JournalNode上的存放位置 --&gt;
+&lt;property&gt;
+&lt;name&gt;dfs.namenode.shared.edits.dir&lt;/name&gt;
+&lt;value&gt;qjournal://weekend05:8485;weekend06:8485;weekend07:8485/ns1&lt;/value&gt;
+&lt;/property&gt;
+&lt;!-- 指定JournalNode在本地磁盘存放数据的位置 --&gt;
+&lt;property&gt;
+&lt;name&gt;dfs.journalnode.edits.dir&lt;/name&gt;
+&lt;value&gt;/home/hadoop/app/hadoop-2.4.1/journaldata&lt;/value&gt;
+&lt;/property&gt;
+&lt;!-- 开启NameNode失败自动切换 --&gt;
+&lt;property&gt;
+&lt;name&gt;dfs.ha.automatic-failover.enabled&lt;/name&gt;
+&lt;value&gt;true&lt;/value&gt;
+&lt;/property&gt;
+&lt;!-- 配置失败自动切换实现方式 --&gt;
+&lt;property&gt;
+&lt;name&gt;dfs.client.failover.proxy.provider.ns1&lt;/name&gt;
+&lt;value&gt;org.apache.hadoop.hdfs.server.namenode.ha.ConfiguredFailoverProxyProvider&lt;/value&gt;
+&lt;/property&gt;
+&lt;!-- 配置隔离机制方法，多个机制用换行分割，即每个机制暂用一行--&gt;
+&lt;property&gt;
+&lt;name&gt;dfs.ha.fencing.methods&lt;/name&gt;
+&lt;value&gt;
+sshfence
+shell(/bin/true)
+&lt;/value&gt;
+&lt;/property&gt;
+&lt;!-- 使用sshfence隔离机制时需要ssh免登陆 --&gt;
+&lt;property&gt;
+&lt;name&gt;dfs.ha.fencing.ssh.private-key-files&lt;/name&gt;
+&lt;value&gt;/home/hadoop/.ssh/id_rsa&lt;/value&gt;
+&lt;/property&gt;
+&lt;!-- 配置sshfence隔离机制超时时间 --&gt;
+&lt;property&gt;
+&lt;name&gt;dfs.ha.fencing.ssh.connect-timeout&lt;/name&gt;
+&lt;value&gt;30000&lt;/value&gt;
+&lt;/property&gt;
+/configuration&gt;
+</code></pre><h3 id="集群运维测试"><a href="#集群运维测试" class="headerlink" title="集群运维测试"></a>集群运维测试</h3><p>HA集群中两个namenode状态的管理命令</p>
+<blockquote>
+<p><a href="#">root@mini2 hadoop-2.6.4</a># bin/hdfs haadmin<br>Usage: DFSHAAdmin <a href="#">-ns \<nameserviceid\></nameserviceid\></a><br>[-transitionToActive \<serviceid\> <a href="#">–forceactive</a>]<br><a href="#">-transitionToStandby \<serviceid\></serviceid\></a><br>[-failover <a href="#">–forcefence</a> <a href="#">–forceactive</a> \<serviceid\> \<serviceid\>]<br><a href="#">-getServiceState \<serviceid\></serviceid\></a><br><a href="#">-checkHealth \<serviceid\></serviceid\></a><br><a href="#">-help \<command\></command\></a><br>示例： 切换nn2为active<br>bin/hdfs haadmin -transitionToActive nn2 –forcemanual</serviceid\></serviceid\></serviceid\></p>
+<h4 id="Datanode动态上下线"><a href="#Datanode动态上下线" class="headerlink" title="Datanode动态上下线"></a>Datanode动态上下线</h4><p>Datanode动态上下线很简单，步骤如下：<br>a)    准备一台服务器，设置好环境<br>b)    部署hadoop的安装包，并同步集群配置<br>c)    联网上线，新datanode会自动加入集群<br>d)    如果是一次增加大批datanode，还应该做集群负载重均衡</p>
+<h4 id="Namenode状态切换管理"><a href="#Namenode状态切换管理" class="headerlink" title="Namenode状态切换管理"></a>Namenode状态切换管理</h4><p>使用的命令上hdfs  haadmin<br>可用 hdfs  haadmin –help查看所有帮助信息<br><img src="/images/hahelp.png" alt="" title="hahelp"><br>可以看到，状态操作的命令示例：<br>查看namenode工作状态<br>    hdfs haadmin -getServiceState nn1<br>将standby状态namenode切换到active<br>    hdfs haadmin –transitionToActive nn1<br>将active状态namenode切换到standby<br>    hdfs haadmin –transitionToStandby nn2</p>
+<h4 id="数据块的balance"><a href="#数据块的balance" class="headerlink" title="数据块的balance"></a>数据块的balance</h4><p>启动balancer的命令：<br>start-balancer.sh -threshold 8<br>运行之后，会有Balancer进程出现：<br><img src="/images/balanceha.png" alt="" title="balanceha"><br>上述命令设置了Threshold为8%，那么执行balancer命令的时候，首先统计所有DataNode的磁盘利用率的均值，然后判断如果某一个DataNode的磁盘利用率超过这个均值Threshold，那么将会把这个DataNode的block转移到磁盘利用率低的DataNode，这对于新节点的加入来说十分有用。Threshold的值为1到100之间，不显示的进行参数设置的话，默认是10。</p>
+<h3 id="HA下hdfs-api变化"><a href="#HA下hdfs-api变化" class="headerlink" title="HA下hdfs-api变化"></a>HA下hdfs-api变化</h3><p>客户端需要nameservice的配置信息，其他不变</p>
+</blockquote>
+<pre><code>/**
+如果访问的是一个ha机制的集群
+则一定要把core-site.xml和hdfs-site.xml配置文件放在客户端程序的classpath下
+以让客户端能够理解hdfs://ns1/中  “ns1”是一个ha机制中的namenode对——nameservice
+以及知道ns1下具体的namenode通信地址
+@author
+ *
+ */
+public class UploadFile {
+    public static void main(String[] args) throws Exception  {
+
+    Configuration conf = new Configuration();
+    conf.set(&quot;fs.defaultFS&quot;, &quot;hdfs://ns1/&quot;);
+
+    FileSystem fs = FileSystem.get(new URI(&quot;hdfs://ns1/&quot;),conf,&quot;hadoop&quot;);
+
+    fs.copyFromLocalFile(new Path(&quot;g:/eclipse-jee-luna-SR1-linux-gtk.tar.gz&quot;), new Path(&quot;hdfs://ns1/&quot;));
+    fs.close(); 
+    }
+}
+</code></pre><p>Federation下 mr程序运行的staging提交目录问题<br>        <property><br>          <name>yarn.app.mapreduce.am.staging-dir</name><br>          <value>/bi/tmp/hadoop-yarn/staging</value><br>          <description>The staging dir used while submitting jobs.<br>          </description><br>        </property></p>
+]]></content>
+    </entry>
+    
+    <entry>
+      <title><![CDATA[Hadoop2.x——倒排索引]]></title>
+      <url>http://spark8.tech/2016/06/22/daopaisuoyin/</url>
+      <content type="html"><![CDATA[<a id="more"></a>
+<h2 id="需求描述"><a href="#需求描述" class="headerlink" title="需求描述"></a>需求描述</h2><p>文档中找单词，当文档数越来越多时，直接打开文档找单词不靠谱(一个一个文档找比较慢)。<br>倒排索引：将单词出现在文档中的位置，记录下来。<br>如：a  -&gt;  1.txt,11.txt,56.txt</p>
+<h2 id="设计思路"><a href="#设计思路" class="headerlink" title="设计思路"></a>设计思路</h2><p>1、计算某个单词出现在一个文档中的次数<br>MR1阶段</p>
+<blockquote>
+<p> 单词     文档名称 次数<br>  分词器 IK<br>  获取文件名 inputSplit<br>  我和我的祖国 一刻也不能分割<br>  我<br>  我的祖国<br>  祖国<br>  ……<br>Map ：<br>KEYOUT: 我:文档名称<br> VALUEOUT: 1<br>SHUFFLE:<br>我:文档名称  Iterable1,1,1,1,1,1,1,1<br>Reduce：<br>我:文档名称 8<br>KEYOUT: 我<br>VALUEOUT： 文档名称 8</p>
+</blockquote>
+<p>2、计算一个单词出现在所有文档中的次数<br>MR2阶段</p>
+<blockquote>
+<p>MAP<br>KEYIN:我<br>VALUEIN:文档名称 8<br>SHUFFLE:<br>我:  Iterable[“文档名称1 8”,”文档名称2 18”]<br>Reduce：<br>KEYOUT:我<br>VALUEOUT：权重值 ，总出现次数，“文档名称1 8”，“文档名称2 18”</p>
+<h2 id="代码开发"><a href="#代码开发" class="headerlink" title="代码开发"></a>代码开发</h2><p>源码请参见<a href="www.baidu.com">github链接</a><br>1.驱动类</p>
+</blockquote>
+<pre><code>public class IndexJob {
+public static void main(String[] args) throws Exception {
+    String map1inputpath = &quot;&quot;;
+    String reduce1outputmap2inputpath = &quot;&quot;;
+    String respath = &quot;&quot;;
+
+    //第一个job
+    Job job = Job.getInstance();
+
+    job.setMapperClass(IndexMap1.class);
+    job.setMapOutputKeyClass(Text.class);
+    job.setMapOutputValueClass(IntWritable.class);
+
+    job.setReducerClass(IndexReduce1.class);
+    job.setOutputKeyClass(Text.class);
+    job.setOutputValueClass(Text.class);
+
+    job.setNumReduceTasks(2);
+
+    FileInputFormat.setInputPaths(job,new Path(&quot;/&quot;));
+    FileOutputFormat.setOutputPath(job, new Path(&quot;/&quot;));
+
+    if(job.waitForCompletion(true)){
+        //第二个job
+        //可不可以公用一个job
+        job.setMapperClass(IndexMap2.class);
+        job.setMapOutputKeyClass(Text.class);
+        job.setMapOutputValueClass(Text.class);
+
+        job.setReducerClass(IndexReduce2.class);
+        job.setOutputKeyClass(Text.class);
+        job.setOutputValueClass(Text.class);
+
+        job.setNumReduceTasks(2);
+
+        FileInputFormat.setInputPaths(job,new Path(&quot;/&quot;));
+        FileOutputFormat.setOutputPath(job, new Path(&quot;/&quot;));
+
+        job.waitForCompletion(true);
+    }
+}
+}
+</code></pre><p>2.IndexMap1类</p>
+<pre><code>public class IndexMap1 extends Mapper&lt;LongWritable,Text,Text,IntWritable&gt; {
+
+@Override
+protected void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
+    byte[] bytes = value.getBytes();
+
+    //2、对数据进行分词
+    InputStream inputStream = new ByteArrayInputStream(bytes);
+    Reader reader = new InputStreamReader(inputStream);
+    IKSegmenter ikSegmenter = new IKSegmenter(reader, true);
+
+    //获得文档名称
+    FileSplit inputSplit = (FileSplit) context.getInputSplit();
+    String fileName  = inputSplit.getPath().getName();
+
+    //4、map端词条出现次数统计
+    Lexeme t;
+    while ((t = ikSegmenter.next()) != null) {
+        context.write(new Text(t.getLexemeText()+&quot;:&quot;+fileName),new IntWritable(1));
+    }
+}
+}
+</code></pre><p>3.Index2Reduce1类</p>
+<pre><code>public class IndexReduce1 extends Reducer&lt;Text,IntWritable,Text,Text&gt; {
+
+@Override
+protected void reduce(Text key, Iterable&lt;IntWritable&gt; values, Context context) throws IOException, InterruptedException {
+    Integer sum=0;
+    for(IntWritable count:values){
+        sum+=count.get();
+    }
+    String[] arrStr = key.toString().split(&quot;:&quot;);
+    key.set(arrStr[0]);
+    context.write(key,new Text(arrStr[1]+&quot;:&quot;+sum));
+}
+}
+</code></pre><p>4.IndexMap2类</p>
+<pre><code>public class IndexMap2 extends Mapper&lt;Text,LongWritable,Text,Text&gt; {
+
+@Override
+protected void map(Text key, LongWritable value, Context context) throws IOException, InterruptedException {
+    String[] arrStr = value.toString().split(&quot; &quot;);
+    context.write(new Text(arrStr[0]),new Text(arrStr[1]));
+}
+}
+</code></pre><p>5.IndexReduce2类</p>
+<pre><code>public class IndexReduce2 extends Reducer&lt;Text,Text,Text,Text&gt; {
+
+@Override
+protected void reduce(Text key, Iterable&lt;Text&gt; values, Context context) throws IOException, InterruptedException {
+    int sum =0;
+    StringBuffer sb = new StringBuffer();
+    for(Text txt:values){
+        sb.append(txt);
+        sb.append(&quot;,&quot;);
+        String[] arrStr = values.toString().split(&quot;:&quot;);
+        sum += Integer.parseInt(arrStr[1]);
+    }
+    context.write(key,new Text(sum + &quot;&quot; + &quot;\t&quot; + sb.toString()));
+}
 }
 </code></pre>]]></content>
     </entry>
@@ -2020,47 +2020,67 @@ object CustomSort {
     </entry>
     
     <entry>
-      <title><![CDATA[Scala—-有序列表合并]]></title>
-      <url>http://spark8.tech/2016/06/18/scalayx/</url>
-      <content type="html"><![CDATA[<a id="more"></a>
-<p>算法本身并不复杂，但是要注意的是递归一定要显式的声明返回值类型。</p>
-<pre><code>  object SortList {
+      <title><![CDATA[Scala——使用Currry实现视图界定]]></title>
+      <url>http://spark8.tech/2016/06/18/scalacurry/</url>
+      <content type="html"><![CDATA[<p>\&lt;!–more–><br>上文中使用了视图界定来解决类与类型的耦合以及规则的耦合，那么不使用视图界定可不可以呢？当然是可以的，这次就用柯里化（Curry）+隐式转换实现视图界定和上下文界定同样的效果。<br>代码如下：</p>
+<pre><code>class Girl(val name:String,var age :Int, val faceValue : Int = 99){
 
-  def main(args: Array[String]) {
-
-    //合并算法
-    def mergedsort[T] (less: (T,T) =&gt; Boolean)(input : List[T]):List[T] = {
-      /**
-       * @param  xlist 要合并的有序列表
-       * @param  ylist 要合并的有序列表
-       * @return 合并后的列表
-       */
-      def merge(xlist: List[T], ylist: List[T]): List[T] = {
-        (xlist,ylist) match{
-          case (Nil,_) =&gt; ylist
-          case (_,Nil) =&gt; xlist
-          case (x :: xtail,y :: ytail) =&gt;
-            if(less(x,y))  x :: merge(xtail,ylist)
-            else y :: merge(xlist,ytail)
-        }
-      }
-      val n =input.length / 2
-      if(n == 0) input
-      else{
-        val (x,y) =input splitAt n
-        merge(mergedsort(less)(x), mergedsort(less)(y))
-
-      }
+}
+object Spark8Predef {
+//T =&gt; Ordered[T]
+implicit def girlToPredef(girl : Girl) = new Ordered[Girl]{
+  override def compare(that: Girl): Int = {
+    if(girl.faceValue == that.faceValue) {
+      that.age - girl.age
+    } else {
+      girl.faceValue - that.faceValue
     }
-
-    println(mergedsort((x : Int,y :Int) =&gt; x &lt; y) (List(1,5,4,7,235,333,43,2,6)))
-
-    val reverse_SortList = mergedsort((x:Int,y:Int) =&gt; x &gt; y ) _
-    println(reverse_SortList(List(1,5,4,7,235,333,43,2,6)))
-
   }
 }
-</code></pre>]]></content>
+//T =&gt;ordering[T] 
+implicit object orderingGril extends Ordering[Girl] {
+  override def compare(x: Girl, y: Girl): Int = {
+
+    if (x.faceValue == y.faceValue) {
+      y.age - x.age
+    } else {
+      x.faceValue - y.faceValue
+    }
+  }
+}
+
+}
+
+class ChooseMachine[T] {
+
+  def chooseGirl(a: T, b: T)(implicit ord: T =&gt; Ordered[T]): T = {
+    // T类型要有&gt;方法,就要拥有T =&gt; Ordered[T] 的函数或者方法
+    if (a &gt; b) a else b
+  }
+
+  def choose2(first: T, second: T)(implicit ord : Ordering[T]) : T = {
+    import Ordered.orderingToOrdered
+    if(first &gt; second) first else second
+  }
+}
+
+/**
+  * 想要实现与viewbound一样的功能，传入一个隐式转换函数
+   */
+object ChooseMachine {
+  def main(args: Array[String]) {
+    import Spark8Predef._
+    val chooser = new ChooseMachine[Girl]
+    val g1 = new Girl(&quot;tingting&quot;, 18, 85)
+    val g2 = new Girl(&quot;angelaBaby&quot;, 20, 95)
+    val choose = chooser.chooseGirl(g1, g2)
+
+    println(choose.name)
+  }
+
+}
+</code></pre><p>其实整个代码还是蛮简单的，就是用ChooseMachine的泛型，泛型参数不是视图界定，那么就在ChooseMachine的具体方法上实现柯里化，然后在导入Spark8Predef里面的隐式转换方法，就OK啦。</p>
+]]></content>
     </entry>
     
     <entry>
@@ -2246,67 +2266,47 @@ case object CheckTimeOutWorker
     </entry>
     
     <entry>
-      <title><![CDATA[Scala——使用Currry实现视图界定]]></title>
-      <url>http://spark8.tech/2016/06/18/scalacurry/</url>
-      <content type="html"><![CDATA[<p>\&lt;!–more–><br>上文中使用了视图界定来解决类与类型的耦合以及规则的耦合，那么不使用视图界定可不可以呢？当然是可以的，这次就用柯里化（Curry）+隐式转换实现视图界定和上下文界定同样的效果。<br>代码如下：</p>
-<pre><code>class Girl(val name:String,var age :Int, val faceValue : Int = 99){
+      <title><![CDATA[Scala—-有序列表合并]]></title>
+      <url>http://spark8.tech/2016/06/18/scalayx/</url>
+      <content type="html"><![CDATA[<a id="more"></a>
+<p>算法本身并不复杂，但是要注意的是递归一定要显式的声明返回值类型。</p>
+<pre><code>  object SortList {
 
-}
-object Spark8Predef {
-//T =&gt; Ordered[T]
-implicit def girlToPredef(girl : Girl) = new Ordered[Girl]{
-  override def compare(that: Girl): Int = {
-    if(girl.faceValue == that.faceValue) {
-      that.age - girl.age
-    } else {
-      girl.faceValue - that.faceValue
-    }
-  }
-}
-//T =&gt;ordering[T] 
-implicit object orderingGril extends Ordering[Girl] {
-  override def compare(x: Girl, y: Girl): Int = {
-
-    if (x.faceValue == y.faceValue) {
-      y.age - x.age
-    } else {
-      x.faceValue - y.faceValue
-    }
-  }
-}
-
-}
-
-class ChooseMachine[T] {
-
-  def chooseGirl(a: T, b: T)(implicit ord: T =&gt; Ordered[T]): T = {
-    // T类型要有&gt;方法,就要拥有T =&gt; Ordered[T] 的函数或者方法
-    if (a &gt; b) a else b
-  }
-
-  def choose2(first: T, second: T)(implicit ord : Ordering[T]) : T = {
-    import Ordered.orderingToOrdered
-    if(first &gt; second) first else second
-  }
-}
-
-/**
-  * 想要实现与viewbound一样的功能，传入一个隐式转换函数
-   */
-object ChooseMachine {
   def main(args: Array[String]) {
-    import Spark8Predef._
-    val chooser = new ChooseMachine[Girl]
-    val g1 = new Girl(&quot;tingting&quot;, 18, 85)
-    val g2 = new Girl(&quot;angelaBaby&quot;, 20, 95)
-    val choose = chooser.chooseGirl(g1, g2)
 
-    println(choose.name)
+    //合并算法
+    def mergedsort[T] (less: (T,T) =&gt; Boolean)(input : List[T]):List[T] = {
+      /**
+       * @param  xlist 要合并的有序列表
+       * @param  ylist 要合并的有序列表
+       * @return 合并后的列表
+       */
+      def merge(xlist: List[T], ylist: List[T]): List[T] = {
+        (xlist,ylist) match{
+          case (Nil,_) =&gt; ylist
+          case (_,Nil) =&gt; xlist
+          case (x :: xtail,y :: ytail) =&gt;
+            if(less(x,y))  x :: merge(xtail,ylist)
+            else y :: merge(xlist,ytail)
+        }
+      }
+      val n =input.length / 2
+      if(n == 0) input
+      else{
+        val (x,y) =input splitAt n
+        merge(mergedsort(less)(x), mergedsort(less)(y))
+
+      }
+    }
+
+    println(mergedsort((x : Int,y :Int) =&gt; x &lt; y) (List(1,5,4,7,235,333,43,2,6)))
+
+    val reverse_SortList = mergedsort((x:Int,y:Int) =&gt; x &gt; y ) _
+    println(reverse_SortList(List(1,5,4,7,235,333,43,2,6)))
+
   }
-
 }
-</code></pre><p>其实整个代码还是蛮简单的，就是用ChooseMachine的泛型，泛型参数不是视图界定，那么就在ChooseMachine的具体方法上实现柯里化，然后在导入Spark8Predef里面的隐式转换方法，就OK啦。</p>
-]]></content>
+</code></pre>]]></content>
     </entry>
     
     <entry>
